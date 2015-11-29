@@ -1,0 +1,12 @@
+{
+  "name": "god-blender",
+  "version": "0.0.0",
+  "description": "",
+  "main": "app.js",
+  "author": "kevin roark",
+  "private": true,
+  "dependencies": {
+    "socket.io": "^1.3.7",
+    "twit": "^2.1.1"
+  }
+}
