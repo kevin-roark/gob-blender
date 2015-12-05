@@ -34,17 +34,10 @@ export class MainScene extends SheenScene {
       this.sounds[filename] = sound;
     });
 
+    this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
+
     this.socket = io('http://localhost:6001');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
-
-    document.addEventListener('mousedown', this.onDocumentMouseDown.bind(this), false);
-    document.addEventListener('touchstart', (ev) => {
-      ev.preventDefault();
-
-      ev.clientX = ev.touches[0].clientX;
-      ev.clientY = ev.touches[0].clientY;
-      this.onDocumentMouseDown(ev);
-    }, false);
   }
 
   /// Overrides
@@ -74,13 +67,7 @@ export class MainScene extends SheenScene {
 
   }
 
-  click() {
-
-  }
-
-  onDocumentMouseDown(ev) {
-    ev.preventDefault();
-
+  click(ev) {
     if (this.detailedTweetMesh) {
       this.bringDetailTweetBackHome();
       return;
@@ -88,21 +75,25 @@ export class MainScene extends SheenScene {
 
     // find the mesh that was clicked and bring it into detail mode
 
-		this.mouse.x = (ev.clientX / this.renderer.domElement.clientWidth) * 2 - 1;
-		this.mouse.y = -(ev.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+    this.mouse.x = (ev.clientX / this.renderer.domElement.clientWidth) * 2 - 1;
+    this.mouse.y = -(ev.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
 
-		this.raycaster.setFromCamera(this.mouse, this.camera);
+    this.raycaster.setFromCamera(this.mouse, this.camera);
 
-		var intersects = this.raycaster.intersectObjects(this.tweetMeshes);
+    var intersects = this.raycaster.intersectObjects(this.tweetMeshes);
 
-		if (intersects.length > 0) {
+    if (intersects.length > 0) {
       var firstIntersection = intersects[0].object;
       this.bringMeshToDetail(firstIntersection);
-		}
+    }
   }
 
   bringMeshToDetail(mesh) {
     this.detailedTweetMesh = mesh;
+
+    var tweet = mesh.__tweetData.tweet;
+    this.detailTweetTextElement.style.display = 'block';
+    this.detailTweetTextElement.innerHTML = '<b>' + tweet.username + '</b><br>' + urlify(tweet.text);
 
     this.tweenMeshSickStyles(mesh, {x: 0, y: 1, z: -25}, 12);
   }
@@ -110,6 +101,7 @@ export class MainScene extends SheenScene {
   bringDetailTweetBackHome() {
     var mesh = this.detailedTweetMesh;
     this.detailedTweetMesh = null;
+    this.detailTweetTextElement.style.display = 'none';
 
     this.tweenMeshSickStyles(mesh, this.randomTweetMeshPosition(), Math.random() * 4 + 0.1);
   }
@@ -173,6 +165,10 @@ export class MainScene extends SheenScene {
     var lifetime = (MAX_MESH_COUNT / TWEETS_PER_SECOND) * 1000;
     setTimeout(() => {
       removeFromArray(this.tweetMeshes, mesh);
+
+      if (mesh === this.detailedTweetMesh) {
+        this.bringDetailTweetBackHome();
+      }
 
       var deathTween = new TWEEN.Tween(scale).to({value: 0.01}, 5000);
       deathTween.onUpdate(updateMeshScale);
@@ -288,4 +284,11 @@ function removeFromArray(arr, el) {
   if (idx > -1) {
     arr.splice(idx, 1);
   }
+}
+
+function urlify(text) {
+    var urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlRegex, function(url) {
+        return '<a target="_blank" href="' + url + '">' + url + '</a>';
+    });
 }

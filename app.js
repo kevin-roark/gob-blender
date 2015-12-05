@@ -79,8 +79,16 @@ var bibleInterval = setInterval(function() {
 console.log('all set up and ready to go...');
 
 function compressTweet(tweet) {
+  var text = tweet.text;
+  tweet.entities.urls.forEach(function(url) {
+    while (text.indexOf(url.display_url) >= 0) {
+      text = text.replace(url.display_url, url.url);
+    }
+  });
+
   return {
-    text: tweet.text
+    text: text,
+    username: '@' + tweet.user.screen_name
   };
 }
 

@@ -54,7 +54,7 @@ class Sheen extends ThreeBoiler {
 
     this.clock = new THREE.Clock();
 
-    $(document).click((ev) => {
+    var handleClick = (ev) => {
       if ($(ev.target).is('a')) {
         return;
       }
@@ -74,8 +74,10 @@ class Sheen extends ThreeBoiler {
         this.start();
       }
 
-      this.mainScene.click();
-    });
+      this.mainScene.click(ev);
+    };
+
+    $(document).click(handleClick);
   }
 
   createScene() {
