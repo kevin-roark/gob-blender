@@ -57,7 +57,6 @@ var bibleInterval = setInterval(function() {
     return;
   }
 
-  console.log('ignore bible.');
   return;
 
   var tweetData = tweetStore[tweetStore.length - 1];

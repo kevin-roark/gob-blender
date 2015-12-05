@@ -10,6 +10,7 @@ import {MainScene} from './main-scene.es6';
 let FlyControls = require('./controls/fly-controls');
 
 var ON_PHONE = (/Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+var USE_CONTROLS = false;
 
 var BaseLoadingText = 'is loading';
 var $splashStatus = $('#splash-status');
@@ -21,6 +22,8 @@ class Sheen extends ThreeBoiler {
       alpha: true,
       onPhone: ON_PHONE
     });
+
+    this.useControls = USE_CONTROLS;
 
     var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
     if (!isChrome) {
@@ -36,13 +39,15 @@ class Sheen extends ThreeBoiler {
   	  this.renderer.gammaOutput = true;
     }
 
-    this.controls = new FlyControls(this.camera, {
-      allowYMovement: false,
-      movementSpeed: 15.0,
-      restrictedXRange: {min: -195, max: 195},
-      restrictedZRange: {min: -195, max: 195}
-    });
-    this.scene.add(this.controls.getObject());
+    if (this.useControls) {
+      this.controls = new FlyControls(this.camera, {
+        allowYMovement: false,
+        movementSpeed: 15.0,
+        restrictedXRange: {min: -195, max: 195},
+        restrictedZRange: {min: -195, max: 195}
+      });
+      this.scene.add(this.controls.getObject());
+    }
 
     this.mainScene = new MainScene(this.renderer, this.camera, this.scene, {onPhone: ON_PHONE});
     this.mainScene.controls = this.controls;
@@ -58,10 +63,12 @@ class Sheen extends ThreeBoiler {
         return;
       }
 
-      if (this.controls.requestPointerlock) {
-        this.controls.requestPointerlock();
+      if (this.useControls) {
+        if (this.controls.requestPointerlock) {
+          this.controls.requestPointerlock();
+        }
+        this.controls.enabled = true;
       }
-      this.controls.enabled = true;
 
       if (!this.hasStarted) {
         this.start();
@@ -86,6 +93,10 @@ class Sheen extends ThreeBoiler {
     return scene;
   }
 
+  createAmbientLight() {
+    return new THREE.AmbientLight(0x505050);
+  }
+
   activate() {
     super.activate();
 
@@ -104,7 +115,9 @@ class Sheen extends ThreeBoiler {
     super.render();
 
     TWEEN.update();
-    this.controls.update();
+    if (this.useControls) {
+      this.controls.update();
+    }
     this.mainScene.update(this.clock.getDelta());
   }
 

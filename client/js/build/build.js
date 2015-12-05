@@ -2552,7 +2552,6 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
 var THREE = require("three");
 var buzz = require("./lib/buzz");
 var TWEEN = require("tween.js");
@@ -2576,6 +2575,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
     this.onPhone = options.onPhone || false;
 
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+    this.tweetMeshes = [];
     this.sounds = {};
 
     var soundFilenames = ["background1", "bell1", "bell2", "bell3", "bell4", "glock1", "glock2", "glock3", "glock4", "mallet1", "mallet2", "mallet3", "mallet4"];
@@ -2590,6 +2592,15 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
     this.socket = io("http://localhost:6001");
     this.socket.on("fresh-tweet", this.handleNewTweet.bind(this));
+
+    document.addEventListener("mousedown", this.onDocumentMouseDown.bind(this), false);
+    document.addEventListener("touchstart", function (ev) {
+      ev.preventDefault();
+
+      ev.clientX = ev.touches[0].clientX;
+      ev.clientY = ev.touches[0].clientY;
+      _this.onDocumentMouseDown(ev);
+    }, false);
   }
 
   _inherits(MainScene, _SheenScene);
@@ -2602,7 +2613,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
       value: function enter() {
         _get(Object.getPrototypeOf(MainScene.prototype), "enter", this).call(this);
 
-        this.controlObject = this.controls.getObject();
+        this.renderer.setClearColor(15790320);
 
         if (!this.domMode) {
           // the heaven and the lights
@@ -2629,30 +2640,113 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     click: {
       value: function click() {}
     },
+    onDocumentMouseDown: {
+      value: function onDocumentMouseDown(ev) {
+        ev.preventDefault();
+
+        if (this.detailedTweetMesh) {
+          this.bringDetailTweetBackHome();
+          return;
+        }
+
+        // find the mesh that was clicked and bring it into detail mode
+
+        this.mouse.x = ev.clientX / this.renderer.domElement.clientWidth * 2 - 1;
+        this.mouse.y = -(ev.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+
+        var intersects = this.raycaster.intersectObjects(this.tweetMeshes);
+
+        if (intersects.length > 0) {
+          var firstIntersection = intersects[0].object;
+          this.bringMeshToDetail(firstIntersection);
+        }
+      }
+    },
+    bringMeshToDetail: {
+      value: function bringMeshToDetail(mesh) {
+        this.detailedTweetMesh = mesh;
+
+        var properties = {
+          x: mesh.position.x,
+          y: mesh.position.y,
+          z: mesh.position.z,
+          scale: mesh.scale.x
+        };
+        var detailTween = new TWEEN.Tween(properties).to({
+          x: 0,
+          y: 1,
+          z: -25,
+          scale: 12
+        }, 2000).onUpdate(function () {
+          mesh.position.set(properties.x, properties.y, properties.z);
+          mesh.scale.set(properties.scale, properties.scale, properties.scale);
+        }).easing(TWEEN.Easing.Elastic.Out);
+        detailTween.start();
+      }
+    },
+    bringDetailTweetBackHome: {
+      value: function bringDetailTweetBackHome() {
+        var mesh = this.detailedTweetMesh;
+        this.detailedTweetMesh = null;
+
+        var targetPosition = this.randomTweetMeshPosition();
+
+        var properties = {
+          x: mesh.position.x,
+          y: mesh.position.y,
+          z: mesh.position.z,
+          scale: mesh.scale.x
+        };
+        var returnTween = new TWEEN.Tween(properties).to({
+          x: targetPosition.x,
+          y: targetPosition.y,
+          z: targetPosition.z,
+          scale: Math.random() * 4 + 0.1
+        }, 2000).onUpdate(function () {
+          mesh.position.set(properties.x, properties.y, properties.z);
+          mesh.scale.set(properties.scale, properties.scale, properties.scale);
+        }).easing(TWEEN.Easing.Elastic.Out);
+        returnTween.start();
+      }
+    },
     handleNewTweet: {
       value: function handleNewTweet(tweetData) {
         console.log("new tweet");
 
-        var mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshBasicMaterial({
-          //color: colorUtil.randomThreeColor()
-          map: this.randomReligionTexture()
+        var mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshLambertMaterial({
+          color: colorUtil.randomThreeColor()
+          //map: this.randomReligionTexture()
         }));
 
-        mesh.position.set((Math.random() - 0.5) * 50, Math.random() * 40, Math.random() * -150 - 20);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.position.copy(this.randomTweetMeshPosition());
 
-        var scale = { value: 0.05 };
+        var scale = {
+          value: 0.05
+        };
         var updateMeshScale = function () {
           mesh.scale.set(scale.value, scale.value, scale.value);
         };
         updateMeshScale();
-        var meshTween = new TWEEN.Tween(scale).to({ value: Math.random() * 4 + 0.1 }, 1000);
+        var meshTween = new TWEEN.Tween(scale).to({
+          value: Math.random() * 4 + 0.1
+        }, 1000);
         meshTween.onUpdate(updateMeshScale);
         meshTween.easing(TWEEN.Easing.Circular.Out);
         meshTween.start();
 
         this.scene.add(mesh);
+        this.tweetMeshes.push(mesh);
 
         this.makeGodSound(tweetData.sentiment);
+      }
+    },
+    randomTweetMeshPosition: {
+      value: function randomTweetMeshPosition() {
+        return new THREE.Vector3((Math.random() - 0.5) * 50, (Math.random() - 0.5) * 30, Math.random() * -150 - 18);
       }
     },
     randomReligionTexture: {
@@ -2706,45 +2800,20 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
       // Creation
 
       value: function makeLights() {
-        var container = new THREE.Object3D();
-        this.scene.add(container);
-        this.lightContainer = container;
+        var light = new THREE.SpotLight(16777215, 1.5);
+        light.position.set(0, 500, 2000);
+        light.castShadow = true;
 
-        this.frontLight = makeDirectionalLight();
-        this.frontLight.position.set(0, 125, 148);
+        light.shadowCameraNear = 200;
+        light.shadowCameraFar = this.camera.far;
+        light.shadowCameraFov = 50;
 
-        this.backLight = makeDirectionalLight();
-        this.backLight.position.set(0, 125, -148);
+        light.shadowBias = -0.00022;
 
-        this.leftLight = makeDirectionalLight();
-        this.leftLight.position.set(-148, 125, 0);
+        light.shadowMapWidth = 2048;
+        light.shadowMapHeight = 2048;
 
-        this.rightLight = makeDirectionalLight();
-        this.rightLight.position.set(148, 125, 0);
-
-        this.spotLight = new THREE.SpotLight(16777215, 10, 155, 40, 30); // color, intensity, distance, angle, exponent, decay
-        this.spotLight.position.set(0, 150, 0);
-        this.spotLight.shadowCameraFov = 20;
-        this.spotLight.shadowCameraNear = 1;
-        setupShadow(this.spotLight);
-        container.add(this.spotLight);
-
-        this.lights = [this.frontLight, this.backLight, this.leftLight, this.rightLight, this.spotLight];
-
-        function makeDirectionalLight() {
-          var light = new THREE.DirectionalLight(16777215, 0.13);
-          light.color.setHSL(0.1, 1, 0.95);
-
-          container.add(light);
-          return light;
-        }
-
-        function setupShadow(light) {
-          light.castShadow = true;
-          //light.shadowCameraFar = 500;
-          light.shadowDarkness = 0.6;
-          light.shadowMapWidth = light.shadowMapHeight = 2048;
-        }
+        this.scene.add(light);
       }
     }
   });
@@ -2775,6 +2844,7 @@ var MainScene = require("./main-scene.es6").MainScene;
 var FlyControls = require("./controls/fly-controls");
 
 var ON_PHONE = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+var USE_CONTROLS = false;
 
 var BaseLoadingText = "is loading";
 var $splashStatus = $("#splash-status");
@@ -2791,6 +2861,8 @@ var Sheen = (function (_ThreeBoiler) {
       onPhone: ON_PHONE
     });
 
+    this.useControls = USE_CONTROLS;
+
     var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
     if (!isChrome) {
       $("#splash-please-use-chrome").show();
@@ -2805,13 +2877,15 @@ var Sheen = (function (_ThreeBoiler) {
       this.renderer.gammaOutput = true;
     }
 
-    this.controls = new FlyControls(this.camera, {
-      allowYMovement: false,
-      movementSpeed: 15,
-      restrictedXRange: { min: -195, max: 195 },
-      restrictedZRange: { min: -195, max: 195 }
-    });
-    this.scene.add(this.controls.getObject());
+    if (this.useControls) {
+      this.controls = new FlyControls(this.camera, {
+        allowYMovement: false,
+        movementSpeed: 15,
+        restrictedXRange: { min: -195, max: 195 },
+        restrictedZRange: { min: -195, max: 195 }
+      });
+      this.scene.add(this.controls.getObject());
+    }
 
     this.mainScene = new MainScene(this.renderer, this.camera, this.scene, { onPhone: ON_PHONE });
     this.mainScene.controls = this.controls;
@@ -2827,10 +2901,12 @@ var Sheen = (function (_ThreeBoiler) {
         return;
       }
 
-      if (_this.controls.requestPointerlock) {
-        _this.controls.requestPointerlock();
+      if (_this.useControls) {
+        if (_this.controls.requestPointerlock) {
+          _this.controls.requestPointerlock();
+        }
+        _this.controls.enabled = true;
       }
-      _this.controls.enabled = true;
 
       if (!_this.hasStarted) {
         _this.start();
@@ -2859,6 +2935,11 @@ var Sheen = (function (_ThreeBoiler) {
         return scene;
       }
     },
+    createAmbientLight: {
+      value: function createAmbientLight() {
+        return new THREE.AmbientLight(5263440);
+      }
+    },
     activate: {
       value: function activate() {
         var _this = this;
@@ -2881,7 +2962,9 @@ var Sheen = (function (_ThreeBoiler) {
         _get(Object.getPrototypeOf(Sheen.prototype), "render", this).call(this);
 
         TWEEN.update();
-        this.controls.update();
+        if (this.useControls) {
+          this.controls.update();
+        }
         this.mainScene.update(this.clock.getDelta());
       }
     },

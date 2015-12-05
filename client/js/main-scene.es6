@@ -1,4 +1,3 @@
-
 var THREE = require('three');
 var buzz = require('./lib/buzz');
 var TWEEN = require('tween.js');
@@ -17,9 +16,12 @@ export class MainScene extends SheenScene {
 
     this.onPhone = options.onPhone || false;
 
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+    this.tweetMeshes = [];
     this.sounds = {};
 
-    var soundFilenames = ['background1','bell1','bell2','bell3','bell4','glock1','glock2','glock3','glock4','mallet1','mallet2','mallet3','mallet4'];
+    var soundFilenames = ['background1', 'bell1', 'bell2', 'bell3', 'bell4', 'glock1', 'glock2', 'glock3', 'glock4', 'mallet1', 'mallet2', 'mallet3', 'mallet4'];
     soundFilenames.forEach((filename) => {
       var sound = new buzz.sound('/media/' + filename, {
         formats: ['mp3', 'ogg'],
@@ -31,6 +33,15 @@ export class MainScene extends SheenScene {
 
     this.socket = io('http://localhost:6001');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
+
+    document.addEventListener('mousedown', this.onDocumentMouseDown.bind(this), false);
+    document.addEventListener('touchstart', (ev) => {
+      ev.preventDefault();
+
+      ev.clientX = ev.touches[0].clientX;
+      ev.clientY = ev.touches[0].clientY;
+      this.onDocumentMouseDown(ev);
+    }, false);
   }
 
   /// Overrides
@@ -38,7 +49,7 @@ export class MainScene extends SheenScene {
   enter() {
     super.enter();
 
-    this.controlObject = this.controls.getObject();
+    this.renderer.setClearColor(0xf0f0f0);
 
     if (!this.domMode) {
       // the heaven and the lights
@@ -64,22 +75,74 @@ export class MainScene extends SheenScene {
 
   }
 
+  onDocumentMouseDown(ev) {
+    ev.preventDefault();
+
+    if (this.detailedTweetMesh) {
+      this.bringDetailTweetBackHome();
+      return;
+    }
+
+    // find the mesh that was clicked and bring it into detail mode
+
+		this.mouse.x = (ev.clientX / this.renderer.domElement.clientWidth) * 2 - 1;
+		this.mouse.y = -(ev.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+
+		this.raycaster.setFromCamera(this.mouse, this.camera);
+
+		var intersects = this.raycaster.intersectObjects(this.tweetMeshes);
+
+		if (intersects.length > 0) {
+      var firstIntersection = intersects[0].object;
+      this.bringMeshToDetail(firstIntersection);
+		}
+  }
+
+  bringMeshToDetail(mesh) {
+    this.detailedTweetMesh = mesh;
+
+    var properties = {x: mesh.position.x, y: mesh.position.y, z: mesh.position.z, scale: mesh.scale.x};
+    var detailTween = new TWEEN.Tween(properties)
+    .to({x: 0, y: 1, z: -25, scale: 12}, 2000)
+    .onUpdate(() => {
+      mesh.position.set(properties.x, properties.y, properties.z);
+      mesh.scale.set(properties.scale, properties.scale, properties.scale);
+    })
+    .easing(TWEEN.Easing.Elastic.Out);
+    detailTween.start();
+  }
+
+  bringDetailTweetBackHome() {
+    var mesh = this.detailedTweetMesh;
+    this.detailedTweetMesh = null;
+
+    var targetPosition = this.randomTweetMeshPosition();
+
+    var properties = {x: mesh.position.x, y: mesh.position.y, z: mesh.position.z, scale: mesh.scale.x};
+    var returnTween = new TWEEN.Tween(properties)
+    .to({x: targetPosition.x, y: targetPosition.y, z: targetPosition.z, scale: Math.random() * 4 + 0.1}, 2000)
+    .onUpdate(() => {
+      mesh.position.set(properties.x, properties.y, properties.z);
+      mesh.scale.set(properties.scale, properties.scale, properties.scale);
+    })
+    .easing(TWEEN.Easing.Elastic.Out);
+    returnTween.start();
+  }
+
   handleNewTweet(tweetData) {
     console.log('new tweet');
 
     var mesh = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
-      new THREE.MeshBasicMaterial({
-        //color: colorUtil.randomThreeColor()
-        map: this.randomReligionTexture()
+      new THREE.MeshLambertMaterial({
+        color: colorUtil.randomThreeColor()
+        //map: this.randomReligionTexture()
       })
     );
 
-    mesh.position.set(
-      (Math.random() - 0.5) * 50,
-      Math.random() * 40,
-      Math.random() * -150 - 20
-    );
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.position.copy(this.randomTweetMeshPosition());
 
     var scale = {value: 0.05};
     var updateMeshScale = () => { mesh.scale.set(scale.value, scale.value, scale.value); };
@@ -90,8 +153,17 @@ export class MainScene extends SheenScene {
     meshTween.start();
 
     this.scene.add(mesh);
+    this.tweetMeshes.push(mesh);
 
     this.makeGodSound(tweetData.sentiment);
+  }
+
+  randomTweetMeshPosition() {
+    return new THREE.Vector3(
+      (Math.random() - 0.5) * 50,
+      (Math.random() - 0.5) * 30,
+      Math.random() * -150 - 18
+    );
   }
 
   randomReligionTexture() {
@@ -151,46 +223,20 @@ export class MainScene extends SheenScene {
   // Creation
 
   makeLights() {
-    let container = new THREE.Object3D();
-    this.scene.add(container);
-    this.lightContainer = container;
+    var light = new THREE.SpotLight(0xffffff, 1.5);
+    light.position.set(0, 500, 2000);
+    light.castShadow = true;
 
-    this.frontLight = makeDirectionalLight();
-    this.frontLight.position.set(0, 125, 148);
+    light.shadowCameraNear = 200;
+    light.shadowCameraFar = this.camera.far;
+    light.shadowCameraFov = 50;
 
-    this.backLight = makeDirectionalLight();
-    this.backLight.position.set(0, 125, -148);
+    light.shadowBias = -0.00022;
 
-    this.leftLight = makeDirectionalLight();
-    this.leftLight.position.set(-148, 125, 0);
+    light.shadowMapWidth = 2048;
+    light.shadowMapHeight = 2048;
 
-    this.rightLight = makeDirectionalLight();
-    this.rightLight.position.set(148, 125, 0);
-
-    this.spotLight = new THREE.SpotLight(0xffffff, 10.0, 155, 40, 30); // color, intensity, distance, angle, exponent, decay
-    this.spotLight.position.set(0, 150, 0);
-    this.spotLight.shadowCameraFov = 20;
-    this.spotLight.shadowCameraNear = 1;
-    setupShadow(this.spotLight);
-    container.add(this.spotLight);
-
-    this.lights = [this.frontLight, this.backLight, this.leftLight, this.rightLight, this.spotLight];
-
-    function makeDirectionalLight() {
-      var light = new THREE.DirectionalLight(0xffffff, 0.13);
-      light.color.setHSL(0.1, 1, 0.95);
-
-      container.add(light);
-      return light;
-    }
-
-    function setupShadow(light) {
-      light.castShadow = true;
-      //light.shadowCameraFar = 500;
-      light.shadowDarkness = 0.6;
-      light.shadowMapWidth = light.shadowMapHeight = 2048;
-    }
-
+    this.scene.add(light);
   }
 
 
