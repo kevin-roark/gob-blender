@@ -3,20 +3,6 @@ var port = (process.env.VCAP_APP_PORT || 3000);
 var express = require("express");
 var sentiment = require('sentiment');
 var twitter = require('ntwitter');
-var buzz = require('buzz');
-
-// Make sounds here so I can see it first
-var sounds = {};
-
-var soundFilenames = ['background1','bell1', 'bell2','bell3','bell4','glock1','glock2','glock3','glock4','mallet1','mallet2','mallet3','mallet4'];
-soundFilenames.forEach((filename) => {
-  var sound = new buzz.sound('/media/' + filename, {
-    formats: [ "ogg", "mp3"],
-    webAudioApi: true,
-    volume: 30
-  });
-  sounds[filename] = sound;
-});
 
 // make Stream globally visible so we can clean up better
 var stream;
@@ -157,43 +143,6 @@ function sentimentImage() {
     }
     // neutral
     return "/images/content.png";
-}
-
-function makeGodSound(score) {
-  if (score>4) {
-    sounds.glock4.play();
-  }
-  else if (score>3) {
-    sounds.glock3.play();
-  }
-  else if (score>2) {
-    sounds.glock2.play();
-  }
-  else if (score>1) {
-    sounds.mallet4.play();
-  }
-  else if (score>0) {
-    sounds.mallet3.play();
-  }
-  else if (score>-1) {
-    sounds.mallet2.play();
-  }
-  else if (score>-2) {
-    sounds.mallet1.play();
-  }
-  else if (score>-3) {
-    sounds.bell4.play();
-  }
-  else if (score>-4) {
-    sounds.bell3.play();
-  }
-  else if (score>-5) {
-    sounds.bell2.play();
-  }
-  else {
-    sounds.bell1.play();
-  }
-
 }
 
 app.get('/',

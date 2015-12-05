@@ -1,6 +1,7 @@
 
 var secrets = require('./secrets');
 var Twit = require('twit');
+var sentiment = require('sentiment');
 var request = require('superagent');
 var xml2js = require('xml2js');
 
@@ -26,19 +27,29 @@ var twitterClient = new Twit({
 });
 
 var godStream = twitterClient.stream('statuses/filter', {
-  track: ['god', 'jesus']
+  track: ['god', 'jesus'],
+  language: 'en'
 });
 
 godStream.on('tweet', function(tweet) {
+  // add to local tweet store
   var compressedTweet = compressTweet(tweet);
-
   tweetStore.push(compressedTweet);
   if (tweetStore.length > 100) {
     tweetStore.unshift();
   }
 
-  // send the tweet to all connected socket.io clients
-  io.emit('fresh-tweet', compressedTweet);
+  // sentiment analysis
+  sentiment(compressedTweet.text, function (err, result) {
+    var score = result ? result.score : 0;
+    var tweetData = {
+      tweet: compressedTweet,
+      sentiment: score
+    };
+
+    // send the data to all connected socket.io clients
+    io.emit('fresh-tweet', tweetData);
+  });
 });
 
 var bibleInterval = setInterval(function() {
