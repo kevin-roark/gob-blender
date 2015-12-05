@@ -17,8 +17,6 @@ io.on('connection', function(socket) {
   });
 });
 
-searchBible('Love');
-
 var twitterClient = new Twit({
   consumer_key: secrets.CONSUMER_KEY,
   consumer_secret: secrets.CONSUMER_SECRET,
@@ -32,12 +30,8 @@ var godStream = twitterClient.stream('statuses/filter', {
 });
 
 godStream.on('tweet', function(tweet) {
-  // add to local tweet store
+  // compress
   var compressedTweet = compressTweet(tweet);
-  tweetStore.push(compressedTweet);
-  if (tweetStore.length > 100) {
-    tweetStore.unshift();
-  }
 
   // sentiment analysis
   sentiment(compressedTweet.text, function (err, result) {
@@ -46,6 +40,12 @@ godStream.on('tweet', function(tweet) {
       tweet: compressedTweet,
       sentiment: score
     };
+
+    // add to local tweet store
+    tweetStore.push(tweetData);
+    if (tweetStore.length > 100) {
+      tweetStore.unshift();
+    }
 
     // send the data to all connected socket.io clients
     io.emit('fresh-tweet', tweetData);
@@ -57,8 +57,11 @@ var bibleInterval = setInterval(function() {
     return;
   }
 
-  var tweet = tweetStore[tweetStore.length - 1];
-  searchBible(tweet.text);
+  console.log('ignore bible.');
+  return;
+
+  var tweetData = tweetStore[tweetStore.length - 1];
+  searchBible(tweetData.tweet.text);
 }, 5000);
 
 console.log('all set up and ready to go...');

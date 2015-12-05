@@ -1,10 +1,9 @@
 
 var THREE = require('three');
-var $ = require('jquery');
 var buzz = require('./lib/buzz');
-var kt = require('kutility');
 var TWEEN = require('tween.js');
 var io = require('socket.io-client');
+var kt = require('kutility');
 
 import {SheenScene} from './sheen-scene.es6';
 var colorUtil = require('./util/color-util');
@@ -23,7 +22,7 @@ export class MainScene extends SheenScene {
     var soundFilenames = ['background1','bell1','bell2','bell3','bell4','glock1','glock2','glock3','glock4','mallet1','mallet2','mallet3','mallet4'];
     soundFilenames.forEach((filename) => {
       var sound = new buzz.sound('/media/' + filename, {
-        formats: [ "ogg", "mp3"],
+        formats: ['mp3', 'ogg'],
         webAudioApi: true,
         volume: 30
       });
@@ -66,20 +65,28 @@ export class MainScene extends SheenScene {
   }
 
   handleNewTweet(tweetData) {
+    console.log('new tweet');
+
     var mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(1),
-      new THREE.MeshBasicMaterial({color: colorUtil.randomThreeColor()})
+      new THREE.SphereGeometry(1, 32, 32),
+      new THREE.MeshBasicMaterial({
+        //color: colorUtil.randomThreeColor()
+        map: this.randomReligionTexture()
+      })
     );
 
     mesh.position.set(
-      (Math.random() - 0.5) * 20,
-      Math.random() * 10,
-      Math.random() * -20 - 1
+      (Math.random() - 0.5) * 50,
+      Math.random() * 40,
+      Math.random() * -150 - 20
     );
 
-    mesh.scale = 0.05;
-    var meshTween = new THREE.Tween(mesh).to({scale: Math.random() * 8 + 1}, 1000);
-    meshTween.easing(TWEEN.Easing.Circular.EaseOut);
+    var scale = {value: 0.05};
+    var updateMeshScale = () => { mesh.scale.set(scale.value, scale.value, scale.value); };
+    updateMeshScale();
+    var meshTween = new TWEEN.Tween(scale).to({value: Math.random() * 4 + 0.1}, 1000);
+    meshTween.onUpdate(updateMeshScale);
+    meshTween.easing(TWEEN.Easing.Circular.Out);
     meshTween.start();
 
     this.scene.add(mesh);
@@ -87,41 +94,57 @@ export class MainScene extends SheenScene {
     this.makeGodSound(tweetData.sentiment);
   }
 
+  randomReligionTexture() {
+    var total = 646;
+    var base = 'http://crossorigin.me/' + 'http://fasenfest.com/jesustest/jesus/jesus';
+    var idx = kt.randInt(total - 1) + 1;
+    var filename = base + idx + '.jpg';
+
+    THREE.ImageUtils.crossOrigin = '';
+    return THREE.ImageUtils.loadTexture(filename);
+  }
+
   makeGodSound(score) {
     var sounds = this.sounds;
 
+    var sound;
     if (score>4) {
-      sounds.glock4.play();
+      sound = sounds.glock4;
     }
     else if (score>3) {
-      sounds.glock3.play();
+      sound = sounds.glock3;
     }
     else if (score>2) {
-      sounds.glock2.play();
+      sound = sounds.glock2;
     }
     else if (score>1) {
-      sounds.mallet4.play();
+      sound = sounds.mallet4;
     }
     else if (score>0) {
-      sounds.mallet3.play();
+      sound = sounds.mallet3;
     }
     else if (score>-1) {
-      sounds.mallet2.play();
+      sound = sounds.mallet2;
     }
     else if (score>-2) {
-      sounds.mallet1.play();
+      sound = sounds.mallet1;
     }
     else if (score>-3) {
-      sounds.bell4.play();
+      sound = sounds.bell4;
     }
     else if (score>-4) {
-      sounds.bell3.play();
+      sound = sounds.bell3;
     }
     else if (score>-5) {
-      sounds.bell2.play();
+      sound = sounds.bell2;
     }
     else {
-      sounds.bell1.play();
+      sound = sounds.bell1;
+    }
+
+    if (sound.isPaused() || sound.getTime() > 0.2) {
+      sound.setTime(0);
+      sound.play();
     }
   }
 
