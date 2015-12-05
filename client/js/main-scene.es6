@@ -5,7 +5,10 @@ var io = require('socket.io-client');
 var kt = require('kutility');
 
 import {SheenScene} from './sheen-scene.es6';
-var colorUtil = require('./util/color-util');
+
+var MAX_MESH_COUNT = 200;
+var TWEETS_PER_SECOND = 5;
+var PI2 = Math.PI * 2;
 
 export class MainScene extends SheenScene {
 
@@ -23,7 +26,7 @@ export class MainScene extends SheenScene {
 
     var soundFilenames = ['background1', 'bell1', 'bell2', 'bell3', 'bell4', 'glock1', 'glock2', 'glock3', 'glock4', 'mallet1', 'mallet2', 'mallet3', 'mallet4'];
     soundFilenames.forEach((filename) => {
-      var sound = new buzz.sound('/media/' + filename, {
+      var sound = new buzz.sound('/media/sound/' + filename, {
         formats: ['mp3', 'ogg'],
         webAudioApi: true,
         volume: 30
@@ -101,45 +104,57 @@ export class MainScene extends SheenScene {
   bringMeshToDetail(mesh) {
     this.detailedTweetMesh = mesh;
 
-    var properties = {x: mesh.position.x, y: mesh.position.y, z: mesh.position.z, scale: mesh.scale.x};
-    var detailTween = new TWEEN.Tween(properties)
-    .to({x: 0, y: 1, z: -25, scale: 12}, 2000)
-    .onUpdate(() => {
-      mesh.position.set(properties.x, properties.y, properties.z);
-      mesh.scale.set(properties.scale, properties.scale, properties.scale);
-    })
-    .easing(TWEEN.Easing.Elastic.Out);
-    detailTween.start();
+    this.tweenMeshSickStyles(mesh, {x: 0, y: 1, z: -25}, 12);
   }
 
   bringDetailTweetBackHome() {
     var mesh = this.detailedTweetMesh;
     this.detailedTweetMesh = null;
 
-    var targetPosition = this.randomTweetMeshPosition();
+    this.tweenMeshSickStyles(mesh, this.randomTweetMeshPosition(), Math.random() * 4 + 0.1);
+  }
 
-    var properties = {x: mesh.position.x, y: mesh.position.y, z: mesh.position.z, scale: mesh.scale.x};
-    var returnTween = new TWEEN.Tween(properties)
-    .to({x: targetPosition.x, y: targetPosition.y, z: targetPosition.z, scale: Math.random() * 4 + 0.1}, 2000)
+  tweenMeshSickStyles(mesh, position, scale) {
+    var properties = {
+      x: mesh.position.x, y: mesh.position.y, z: mesh.position.z,
+      scale: mesh.scale.x,
+      rx: mesh.rotation.x, ry: mesh.rotation.y, rz: mesh.rotation.z
+    };
+
+    var target = {
+      x: position.x, y: position.y, z: position.z,
+      scale: scale,
+      rx: Math.random() * PI2, ry: Math.random() * PI2, rz: Math.random() * PI2
+    };
+
+    var tween = new TWEEN.Tween(properties)
+    .to(target, 2000)
     .onUpdate(() => {
       mesh.position.set(properties.x, properties.y, properties.z);
+      mesh.rotation.set(properties.rx, properties.ry, properties.rz);
       mesh.scale.set(properties.scale, properties.scale, properties.scale);
     })
     .easing(TWEEN.Easing.Elastic.Out);
-    returnTween.start();
+
+    tween.start();
   }
 
   handleNewTweet(tweetData) {
     console.log('new tweet');
 
+    this.makeGodSound(tweetData.sentiment);
+
     var mesh = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
       new THREE.MeshLambertMaterial({
-        color: colorUtil.randomThreeColor()
-        //map: this.randomReligionTexture()
+        color: this.colorForSentiment(tweetData.sentiment),
+        transparent: true,
+        opacity: Math.random() * 0.2 + 0.8,
+        map: this.religionTextureForSentiment(tweetData.sentiment)
       })
     );
 
+    mesh.__tweetData = tweetData;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.position.copy(this.randomTweetMeshPosition());
@@ -155,7 +170,16 @@ export class MainScene extends SheenScene {
     this.scene.add(mesh);
     this.tweetMeshes.push(mesh);
 
-    this.makeGodSound(tweetData.sentiment);
+    var lifetime = (MAX_MESH_COUNT / TWEETS_PER_SECOND) * 1000;
+    setTimeout(() => {
+      removeFromArray(this.tweetMeshes, mesh);
+
+      var deathTween = new TWEEN.Tween(scale).to({value: 0.01}, 5000);
+      deathTween.onUpdate(updateMeshScale);
+      deathTween.easing(TWEEN.Easing.Circular.Out);
+      deathTween.onComplete(() => { this.scene.remove(mesh); });
+      deathTween.start();
+    }, lifetime);
   }
 
   randomTweetMeshPosition() {
@@ -166,14 +190,33 @@ export class MainScene extends SheenScene {
     );
   }
 
-  randomReligionTexture() {
-    var total = 646;
-    var base = 'http://crossorigin.me/' + 'http://fasenfest.com/jesustest/jesus/jesus';
+  religionTextureForSentiment(score) {
+    var total = score >= 0 ? 646 : 446;
     var idx = kt.randInt(total - 1) + 1;
-    var filename = base + idx + '.jpg';
+    var filebase = score >= 0 ? '/media/photos/jesus/jesus' : '/media/photos/hell/hell';
+    var filename = filebase + idx + '.jpg';
 
-    THREE.ImageUtils.crossOrigin = '';
-    return THREE.ImageUtils.loadTexture(filename);
+    var texture = THREE.ImageUtils.loadTexture(filename);
+    texture.minFilter = THREE.NearestFilter;
+    texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
+    return texture;
+  }
+
+  colorForSentiment(score) {
+    var color = new THREE.Color(0xffffff);
+
+    var maxMagnitude = 10;
+    var clampedScore = score < 0 ? Math.min(-score, maxMagnitude) : Math.min(score, maxMagnitude);
+    var percent = clampedScore / maxMagnitude;
+
+    if (score < 0) {
+      color.setRGB(1, 1 - percent, 1 - percent);
+    }
+    else {
+      color.setRGB(1 - percent, 1, 1 - percent);
+    }
+
+    return color;
   }
 
   makeGodSound(score) {
@@ -238,6 +281,11 @@ export class MainScene extends SheenScene {
 
     this.scene.add(light);
   }
+}
 
-
+function removeFromArray(arr, el) {
+  var idx = arr.indexOf(el);
+  if (idx > -1) {
+    arr.splice(idx, 1);
+  }
 }

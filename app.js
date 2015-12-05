@@ -25,11 +25,24 @@ var twitterClient = new Twit({
 });
 
 var godStream = twitterClient.stream('statuses/filter', {
-  track: ['god', 'jesus'],
+  track: ['god', 'jesus', 'hell'],
   language: 'en'
 });
 
+var MAX_THROUGHPUT_PER_SECOND = 5;
+var tweetsSentThisSecond = 0;
+setInterval(function resetThroughput() {
+  tweetsSentThisSecond = 0;
+}, 1000);
+
 godStream.on('tweet', function(tweet) {
+  // check throughput limit
+  if (tweetsSentThisSecond > MAX_THROUGHPUT_PER_SECOND) {
+    return;
+  }
+
+  tweetsSentThisSecond += 1;
+
   // compress
   var compressedTweet = compressTweet(tweet);
 
