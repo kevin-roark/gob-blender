@@ -14,6 +14,7 @@ export class MainScene extends SheenScene {
 
   /// Init
 
+
   constructor(renderer, camera, scene, options) {
     super(renderer, camera, scene, options);
 
@@ -23,6 +24,10 @@ export class MainScene extends SheenScene {
     this.mouse = new THREE.Vector2();
     this.tweetMeshes = [];
     this.sounds = {};
+    this.useSkybox = true;
+    this.useMeshImages = true;
+    this.useSentimentColor = false;
+    this.useRandomColor = true;
 
     var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
     soundFilenames.forEach((filename) => {
@@ -37,10 +42,28 @@ export class MainScene extends SheenScene {
     this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
     this.sounds.background1loud.setVolume(70);
     this.sounds.background1loud.setTime(0);
-    this.sounds.background1loud.play();
+    //this.sounds.background1loud.play();
 
     this.socket = io('http://localhost:6001');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
+
+    if(this.useSkybox){
+        var imagePrefix = "media/textures/skybox/";
+      	var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
+      	var imageSuffix = ".jpg";
+      	var skyGeometry = new THREE.CubeGeometry( 10000, 10000, 10000 );
+
+      	var materialArray = [];
+      	for (var i = 0; i < 6; i++)
+      		materialArray.push( new THREE.MeshBasicMaterial({
+      			map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
+      			side: THREE.BackSide
+      		}));
+      	var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
+      	var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
+      	this.scene.add(skyBox);
+    }
+
   }
 
   /// Overrides
@@ -145,9 +168,13 @@ export class MainScene extends SheenScene {
         color: this.colorForSentiment(tweetData.sentiment),
         transparent: true,
         opacity: Math.random() * 0.2 + 0.8,
-        map: this.religionTextureForSentiment(tweetData.sentiment)
+        //map: this.religionTextureForSentiment(tweetData.sentiment)
       })
     );
+
+    if(this.useMeshImages){
+      mesh.material.map = this.religionTextureForSentiment(tweetData.sentiment);
+    }
 
     mesh.__tweetData = tweetData;
     mesh.castShadow = true;
@@ -157,7 +184,7 @@ export class MainScene extends SheenScene {
     var scale = {value: 0.05};
     var updateMeshScale = () => { mesh.scale.set(scale.value, scale.value, scale.value); };
     updateMeshScale();
-    var meshTween = new TWEEN.Tween(scale).to({value: Math.random() * 4 + 0.1}, 1000);
+    var meshTween = new TWEEN.Tween(scale).to({value: Math.random() * 2 + (tweetData.tweet.text.length / 40)}, 1000);
     meshTween.onUpdate(updateMeshScale);
     meshTween.easing(TWEEN.Easing.Circular.Out);
     meshTween.start();
@@ -208,13 +235,17 @@ export class MainScene extends SheenScene {
     var clampedScore = score < 0 ? Math.min(-score, maxMagnitude) : Math.min(score, maxMagnitude);
     var percent = clampedScore / maxMagnitude;
 
-    if (score < 0) {
-      color.setRGB(1, 1 - percent, 1 - percent);
+    if (this.useSentimentColor){
+      if (score < 0) {
+        color.setRGB(1, 1 - percent, 1 - percent);
+      }
+      else {
+        color.setRGB(1 - percent, percent, 1 - percent);
+      }
     }
-    else {
-      color.setRGB(1 - percent, 1, 1 - percent);
+    else if (this.useRandomColor) {
+      color.setRGB(Math.random(),Math.random(),Math.random());
     }
-
     return color;
   }
 
@@ -313,7 +344,7 @@ export class MainScene extends SheenScene {
 
     if (sound.isPaused() || sound.getTime() > 0.2) {
       sound.setTime(0);
-      sound.play();
+      //sound.play();
     }
   }
 
