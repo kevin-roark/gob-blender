@@ -25,11 +25,11 @@ export class MainScene extends SheenScene {
     this.tweetMeshes = [];
     this.sounds = {};
     this.useSkybox = false;
-    this.useMeshImages = false;
-    this.useSentimentColor = false;
-    this.useRandomColor = true;
-    this.usePercussion = true;
-    this.useInstruments = false;
+    this.useMeshImages = true;
+    this.useSentimentColor = true;
+    this.useRandomColor = false;
+    this.usePercussion = false;
+    this.useInstruments = true;
 
 
     var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
@@ -265,7 +265,7 @@ export class MainScene extends SheenScene {
         color.setRGB(1, 1 - percent, 1 - percent);
       }
       else {
-        color.setRGB(1 - percent, percent, 1 - percent);
+        color.setRGB(1 - percent, 1, 1 - percent);
       }
     }
     else if (this.useRandomColor) {
