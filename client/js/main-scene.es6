@@ -3,11 +3,12 @@ var buzz = require('./lib/buzz');
 var TWEEN = require('tween.js');
 var io = require('socket.io-client');
 var kt = require('kutility');
+var Tone = require('tone');
 
 import {SheenScene} from './sheen-scene.es6';
 
 var MAX_MESH_COUNT = 300;
-var TWEETS_PER_SECOND = 7;
+var TWEETS_PER_SECOND = 4;
 var PI2 = Math.PI * 2;
 
 export class MainScene extends SheenScene {
@@ -29,8 +30,20 @@ export class MainScene extends SheenScene {
     this.useSentimentColor = true;
     this.useRandomColor = false;
     this.usePercussion = false;
-    this.useInstruments = true;
+    this.useInstruments = false;
+    this.useSynth = true;
 
+    this.synth = new Tone.SimpleSynth({
+			"oscillator" : {
+				"type" : "triangle"
+			},
+			"envelope" : {
+				"attack" : 0.01,
+				"decay" : 0.2,
+				"sustain" : 0.4,
+				"release" : 0.2,
+			}
+		}).toMaster();
 
     var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
     soundFilenames.forEach((filename) => {
@@ -278,6 +291,7 @@ export class MainScene extends SheenScene {
     var sounds = this.sounds;
     var soundArray = [];
     var percSoundArray = [];
+    var noteArray = [];
 
     var sound;
     var sound2;
@@ -333,22 +347,27 @@ export class MainScene extends SheenScene {
     else if (score>3) {
       soundArray = [sounds.altglock1];
       percSoundArray = [sounds.hh7,sounds.hh8,sounds.hh9,sounds.hh10,sounds.hh11];
+      noteArray = ["C8","D8","E8","G8","A8","C9"];
     }
     else if (score>2) {
       soundArray = [sounds.mallet4,sounds.mallet5,sounds.mallet6,sounds.mallet7,sounds.mallet8];
       percSoundArray = [sounds.hh6,sounds.hh7,sounds.hh8,sounds.hh9,sounds.hh10];
+      noteArray = ["C7","D7","E7","G7","A7","C8"];
     }
     else if (score>1) {
       soundArray = [sounds.mallet3,sounds.mallet4,sounds.mallet5,sounds.mallet6,sounds.mallet7];
       percSoundArray = [sounds.hh5,sounds.hh6,sounds.hh7,sounds.hh8,sounds.hh9];
+      noteArray = ["C6","D6","E6","G6","A6","C7"];
     }
     else if (score>0) {
       soundArray = [sounds.mallet2,sounds.mallet3,sounds.mallet4,sounds.mallet5,sounds.mallet6];
       percSoundArray = [sounds.hh4,sounds.hh5,sounds.hh6,sounds.hh7,sounds.hh8];
+      noteArray = ["C5","D5","E5","G5","A5","C6"];
     }
     else if (score>-1) {
       soundArray = [sounds.mallet1,sounds.mallet2,sounds.mallet3,sounds.mallet4,sounds.mallet5];
       percSoundArray = [sounds.hh3,sounds.hh4,sounds.hh5,sounds.hh6,sounds.hh7];
+      noteArray = ["C4","D4","E4","G4","A4","C5"];
     }
     else if (score>-2) {
       soundArray = [sounds.dbass4,sounds.dbass5,sounds.dbass6,sounds.dbass7,sounds.dbass8];
@@ -405,6 +424,11 @@ export class MainScene extends SheenScene {
         sound2.setTime(0);
         sound2.play();
       }
+    }
+
+    if(this.useSynth){
+      var note = kt.choice(noteArray);
+      this.synth.triggerAttackRelease(note, "8n");
     }
   }
 
