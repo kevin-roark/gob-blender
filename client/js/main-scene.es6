@@ -6,8 +6,8 @@ var kt = require('kutility');
 
 import {SheenScene} from './sheen-scene.es6';
 
-var MAX_MESH_COUNT = 200;
-var TWEETS_PER_SECOND = 5;
+var MAX_MESH_COUNT = 300;
+var TWEETS_PER_SECOND = 7;
 var PI2 = Math.PI * 2;
 
 export class MainScene extends SheenScene {
@@ -24,7 +24,7 @@ export class MainScene extends SheenScene {
     this.tweetMeshes = [];
     this.sounds = {};
 
-    var soundFilenames = ['background1', 'bell1', 'bell2', 'bell3', 'bell4', 'glock1', 'glock2', 'glock3', 'glock4', 'mallet1', 'mallet2', 'mallet3', 'mallet4'];
+    var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
     soundFilenames.forEach((filename) => {
       var sound = new buzz.sound('/media/sound/' + filename, {
         formats: ['mp3', 'ogg'],
@@ -35,6 +35,9 @@ export class MainScene extends SheenScene {
     });
 
     this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
+    this.sounds.background1loud.setVolume(70);
+    this.sounds.background1loud.setTime(0);
+    this.sounds.background1loud.play();
 
     this.socket = io('http://localhost:6001');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
@@ -162,7 +165,7 @@ export class MainScene extends SheenScene {
     this.scene.add(mesh);
     this.tweetMeshes.push(mesh);
 
-    var lifetime = (MAX_MESH_COUNT / TWEETS_PER_SECOND) * 1000;
+    var lifetime = (MAX_MESH_COUNT / TWEETS_PER_SECOND) * 1000 - 5000;
     setTimeout(() => {
       removeFromArray(this.tweetMeshes, mesh);
 
@@ -217,40 +220,95 @@ export class MainScene extends SheenScene {
 
   makeGodSound(score) {
     var sounds = this.sounds;
+    var soundarray = [];
 
     var sound;
-    if (score>4) {
-      sound = sounds.glock4;
+    if (score>15) {
+      sound = sounds.glock13;
+    }
+    else if (score>14) {
+      sound = sounds.glock12;
+    }
+    else if (score>13) {
+      sound = sounds.glock11;
+    }
+    else if (score>12) {
+      sound = sounds.glock10;
+    }
+    else if (score>11) {
+      sound = sounds.glock9;
+    }
+    else if (score>10) {
+      sound = sounds.glock8;
+    }
+    else if (score>9) {
+      sound = sounds.glock7;
+    }
+    else if (score>8) {
+      sound = sounds.altglock6;
+    }
+    else if (score>7) {
+      sound = sounds.altglock5;
+    }
+    else if (score>6) {
+      sound = sounds.altglock4;
+    }
+    else if (score>5) {
+      sound = sounds.altglock3;
+    }
+    else if (score>4) {
+      sound = sounds.altglock2;
     }
     else if (score>3) {
-      sound = sounds.glock3;
+      sound = sounds.altglock1;
     }
     else if (score>2) {
-      sound = sounds.glock2;
+      soundarray = [sounds.mallet4,sounds.mallet5,sounds.mallet6,sounds.mallet7,sounds.mallet8];
+      sound = kt.choice(soundarray);
     }
     else if (score>1) {
-      sound = sounds.mallet4;
+      soundarray = [sounds.mallet3,sounds.mallet4,sounds.mallet5,sounds.mallet6,sounds.mallet7];
+      sound = kt.choice(soundarray);
     }
     else if (score>0) {
-      sound = sounds.mallet3;
+      soundarray = [sounds.mallet2,sounds.mallet3,sounds.mallet4,sounds.mallet5,sounds.mallet6];
+      sound = kt.choice(soundarray);
     }
     else if (score>-1) {
-      sound = sounds.mallet2;
+      soundarray = [sounds.mallet1,sounds.mallet2,sounds.mallet3,sounds.mallet4,sounds.mallet5];
+      sound = kt.choice(soundarray);
     }
     else if (score>-2) {
-      sound = sounds.mallet1;
+      soundarray = [sounds.dbass4,sounds.dbass5,sounds.dbass6,sounds.dbass7,sounds.dbass8];
+      sound = kt.choice(soundarray);
     }
     else if (score>-3) {
-      sound = sounds.bell4;
+      soundarray = [sounds.dbass1,sounds.dbass2,sounds.dbass3,sounds.dbass4,sounds.dbass5];
+      sound = kt.choice(soundarray);
     }
     else if (score>-4) {
-      sound = sounds.bell3;
+      sound = sounds.cloud8;
     }
     else if (score>-5) {
-      sound = sounds.bell2;
+      sound = sounds.clouds7;
+    }
+    else if (score>-6) {
+      sound = sounds.clouds6;
+    }
+    else if (score>-7) {
+      sound = sounds.clouds5;
+    }
+    else if (score>-8) {
+      sound = sounds.clouds4;
+    }
+    else if (score>-9) {
+      sound = sounds.clouds3;
+    }
+    else if (score>-10) {
+      sound = sounds.clouds2;
     }
     else {
-      sound = sounds.bell1;
+      sound = sounds.clouds1;
     }
 
     if (sound.isPaused() || sound.getTime() > 0.2) {
