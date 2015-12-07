@@ -124,8 +124,9 @@ a {
 }
   .stat-hud p {
     margin: 0; padding: 0;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
   }
-  #good-tweet-count {
+  #good-tweet-count, #total-sentiment {
     color: rgb(46, 238, 135);
   }
   #bad-tweet-count {

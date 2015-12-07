@@ -2593,8 +2593,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.tweetMeshes = [];
     this.goodTweetCount = 0;
     this.badTweetCount = 0;
+    this.totalSentiment = 0;
 
-    this.nounTracker = new WordTracker({ bannedWords: ["god", "r"] });
+    this.nounTracker = new WordTracker({ bannedWords: ["god", "rt"] });
     this.verbTracker = new WordTracker({ bannedWords: ["is", "rt"] });
     this.adjectiveTracker = new WordTracker();
 
@@ -2602,6 +2603,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.tickerTweetTextElement = document.querySelector("#ticker-tweet-text");
     this.goodTweetCountElement = document.querySelector("#good-tweet-count");
     this.badTweetCountElement = document.querySelector("#bad-tweet-count");
+    this.totalSentimentElement = document.querySelector("#total-sentiment");
     this.godAdjectiveElement = document.querySelector("#god-adjective");
     this.godVerbElement = document.querySelector("#god-verb");
     this.mostFrequentNounsElement = document.querySelector("#most-frequent-nouns-list");
@@ -2831,6 +2833,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
       value: function handleNewTweet(tweetData) {
         this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
 
+        this.totalSentiment += tweetData.sentiment;
+        this.totalSentimentElement.innerText = this.totalSentiment;
+
         if (tweetData.sentiment >= 0) {
           this.goodTweetCount += 1;
           this.goodTweetCountElement.innerText = this.goodTweetCount;
@@ -2939,15 +2944,36 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     religionTextureForSentiment: {
       value: function religionTextureForSentiment(score) {
-        var total = score >= 0 ? 646 : 446;
-        var idx = kt.randInt(total - 1) + 1;
-        var filebase = score >= 0 ? "/media/photos/jesus/jesus" : "/media/photos/hell/hell";
+        var fuzzySentimentImageCounts = { amazing: 454, great: 759, good: 473, ok: 535, bad: 322, worse: 361, horrible: 456 };
+
+        var fuzzySentiment = this.fuzzySentiment(score);
+        var filebase = "/media/photos/" + fuzzySentiment + "/" + fuzzySentiment;
+        var idx = kt.randInt(fuzzySentimentImageCounts[fuzzySentiment] - 1) + 1;
         var filename = filebase + idx + ".jpg";
 
         var texture = THREE.ImageUtils.loadTexture(filename);
         texture.minFilter = THREE.NearestFilter;
         texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
         return texture;
+      }
+    },
+    fuzzySentiment: {
+      value: function fuzzySentiment(score) {
+        if (score > 15) {
+          return "amazing";
+        } else if (score > 9) {
+          return "great";
+        } else if (score > 3) {
+          return "good";
+        } else if (score > -2) {
+          return "ok";
+        } else if (score > -5) {
+          return "bad";
+        } else if (score > -10) {
+          return "worse";
+        } else {
+          return "horrible";
+        }
       }
     },
     colorForSentiment: {
