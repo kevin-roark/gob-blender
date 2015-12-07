@@ -20,7 +20,7 @@ export class MainScene extends SheenScene {
     super(renderer, camera, scene, options);
 
     this.onPhone = options.onPhone || false;
-    this.useSkybox = false;
+    this.useSkybox = true;
     this.useMeshImages = true;
     this.useSentimentColor = true;
     this.useRandomColor = false;
@@ -69,20 +69,20 @@ export class MainScene extends SheenScene {
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
 
     if (this.useSkybox) {
-        var imagePrefix = "media/textures/skybox/";
-      	var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
-      	var imageSuffix = ".jpg";
-      	var skyGeometry = new THREE.CubeGeometry( 10000, 10000, 10000 );
+      var imagePrefix = "media/textures/skybox/";
+      var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
+      var imageSuffix = ".jpg";
+      var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
 
-      	var materialArray = [];
-      	for (var i = 0; i < 6; i++)
-      		materialArray.push( new THREE.MeshBasicMaterial({
-      			map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
-      			side: THREE.BackSide
-      		}));
-      	var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
-      	var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
-      	this.scene.add(skyBox);
+      var materialArray = [];
+      for (var i = 0; i < 6; i++)
+        materialArray.push( new THREE.MeshBasicMaterial({
+          map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
+          side: THREE.BackSide
+        }));
+      var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
+      var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
+      this.scene.add(skyBox);
     }
 
   }

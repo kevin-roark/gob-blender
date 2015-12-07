@@ -2577,7 +2577,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     _get(Object.getPrototypeOf(MainScene.prototype), "constructor", this).call(this, renderer, camera, scene, options);
 
     this.onPhone = options.onPhone || false;
-    this.useSkybox = false;
+    this.useSkybox = true;
     this.useMeshImages = true;
     this.useSentimentColor = true;
     this.useRandomColor = false;
@@ -2629,7 +2629,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
       var imagePrefix = "media/textures/skybox/";
       var directions = ["px", "nx", "py", "ny", "pz", "nz"];
       var imageSuffix = ".jpg";
-      var skyGeometry = new THREE.CubeGeometry(10000, 10000, 10000);
+      var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
 
       var materialArray = [];
       for (var i = 0; i < 6; i++) materialArray.push(new THREE.MeshBasicMaterial({
@@ -3110,8 +3110,6 @@ var Sheen = (function (_ThreeBoiler) {
           // here wanna apply new forces to objects and things based on state
           scene.simulate(undefined, 1);
         });
-
-        scene.fog = new THREE.Fog(1118481, 1, 600);
 
         return scene;
       }
