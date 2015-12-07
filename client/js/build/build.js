@@ -2552,6 +2552,7 @@ var _classCallCheck = function (instance, Constructor) { if (!(instance instance
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
 var THREE = require("three");
 var buzz = require("./lib/buzz");
 var TWEEN = require("tween.js");
@@ -2675,6 +2676,12 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         this.camera.position.y = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
         this.camera.position.z = SCENE_RADIUS * Math.cos(this.cameraRotationAngle);
         this.camera.lookAt(this.scene.position);
+
+        if (this.detailedTweetMesh) {
+          this.detailedTweetMesh.rotation.x += this.detailedTweetMeshRotation.x;
+          this.detailedTweetMesh.rotation.y += this.detailedTweetMeshRotation.y;
+          this.detailedTweetMesh.rotation.z += this.detailedTweetMeshRotation.z;
+        }
       }
     },
     spacebarPressed: {
@@ -2683,21 +2690,31 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
       value: function spacebarPressed() {}
     },
+    move: {
+      value: function move(ev) {
+        _get(Object.getPrototypeOf(MainScene.prototype), "move", this).call(this, ev);
+
+        var cursor = "auto";
+
+        if (!this.detailedTweetMesh) {
+          var intersects = this.mouseIntersections(ev);
+          if (intersects.length > 0) cursor = "pointer";
+        }
+
+        this.domContainer.css("cursor", cursor);
+      }
+    },
     click: {
       value: function click(ev) {
+        _get(Object.getPrototypeOf(MainScene.prototype), "click", this).call(this, ev);
+
         if (this.detailedTweetMesh) {
           this.bringDetailTweetBackHome();
           return;
         }
 
         // find the mesh that was clicked and bring it into detail mode
-
-        this.mouse.x = ev.clientX / this.renderer.domElement.clientWidth * 2 - 1;
-        this.mouse.y = -(ev.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
-
-        this.raycaster.setFromCamera(this.mouse, this.camera);
-
-        var intersects = this.raycaster.intersectObjects(this.tweetMeshes);
+        var intersects = this.mouseIntersections(ev);
 
         if (intersects.length > 0) {
           var firstIntersection = intersects[0].object;
@@ -2705,9 +2722,25 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         }
       }
     },
+    mouseIntersections: {
+      value: function mouseIntersections(mouseEvent) {
+        this.mouse.x = mouseEvent.clientX / this.renderer.domElement.clientWidth * 2 - 1;
+        this.mouse.y = -(mouseEvent.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+
+        var intersects = this.raycaster.intersectObjects(this.tweetMeshes);
+        return intersects;
+      }
+    },
     bringMeshToDetail: {
       value: function bringMeshToDetail(mesh) {
         this.detailedTweetMesh = mesh;
+        this.detailedTweetMeshRotation = {
+          x: (Math.random() - 0.5) * 0.01,
+          y: (Math.random() - 0.5) * 0.01,
+          z: (Math.random() - 0.5) * 0.01
+        };
 
         var tweet = mesh.__tweetData.tweet;
         this.detailTweetTextElement.innerHTML = "<b>" + tweet.username + "</b><br>" + urlify(tweet.text);
@@ -2757,9 +2790,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
           mesh.position.set(properties.x, properties.y, properties.z);
           mesh.scale.set(properties.scale, properties.scale, properties.scale);
           _this.detailTweetTextElement.style.opacity = properties.opacity;
-        }).easing(TWEEN.Easing.Quadratic.Out).start();
-
-        new TWEEN.Tween(mesh.rotation).to({ x: Math.random() * PI2, y: Math.random() * PI2, z: Math.random() * PI2 }, 1000).easing(TWEEN.Easing.Elastic.Out).start();
+        }).easing(TWEEN.Easing.Cubic.Out).start();
       }
     },
     handleNewTweet: {
@@ -3071,7 +3102,7 @@ var Sheen = (function (_ThreeBoiler) {
 
     this.clock = new THREE.Clock();
 
-    var handleClick = function (ev) {
+    $(document).click(function (ev) {
       if ($(ev.target).is("a")) {
         return;
       }
@@ -3092,9 +3123,11 @@ var Sheen = (function (_ThreeBoiler) {
       }
 
       _this.mainScene.click(ev);
-    };
+    });
 
-    $(document).click(handleClick);
+    $(document).mousemove(function (ev) {
+      _this.mainScene.move(ev);
+    });
   }
 
   _inherits(Sheen, _ThreeBoiler);
@@ -3324,6 +3357,9 @@ var SheenScene = exports.SheenScene = (function () {
           this.hasStarted = true;
         }
       }
+    },
+    move: {
+      value: function move() {}
     },
     resize: {
       value: function resize() {}

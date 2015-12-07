@@ -1,3 +1,4 @@
+
 var THREE = require('three');
 var buzz = require('./lib/buzz');
 var TWEEN = require('tween.js');
@@ -113,6 +114,12 @@ export class MainScene extends SheenScene {
     this.camera.position.y = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
     this.camera.position.z = SCENE_RADIUS * Math.cos(this.cameraRotationAngle);
     this.camera.lookAt(this.scene.position);
+
+    if (this.detailedTweetMesh) {
+      this.detailedTweetMesh.rotation.x += this.detailedTweetMeshRotation.x;
+      this.detailedTweetMesh.rotation.y += this.detailedTweetMeshRotation.y;
+      this.detailedTweetMesh.rotation.z += this.detailedTweetMeshRotation.z;
+    }
   }
 
   // Interaction
@@ -121,20 +128,29 @@ export class MainScene extends SheenScene {
 
   }
 
+  move(ev) {
+    super.move(ev);
+
+    var cursor = 'auto';
+
+    if (!this.detailedTweetMesh) {
+      var intersects = this.mouseIntersections(ev);
+      if (intersects.length > 0) cursor = 'pointer';
+    }
+
+    this.domContainer.css('cursor', cursor);
+  }
+
   click(ev) {
+    super.click(ev);
+
     if (this.detailedTweetMesh) {
       this.bringDetailTweetBackHome();
       return;
     }
 
     // find the mesh that was clicked and bring it into detail mode
-
-    this.mouse.x = (ev.clientX / this.renderer.domElement.clientWidth) * 2 - 1;
-    this.mouse.y = -(ev.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
-
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-
-    var intersects = this.raycaster.intersectObjects(this.tweetMeshes);
+    var intersects = this.mouseIntersections(ev);
 
     if (intersects.length > 0) {
       var firstIntersection = intersects[0].object;
@@ -142,8 +158,23 @@ export class MainScene extends SheenScene {
     }
   }
 
+  mouseIntersections(mouseEvent) {
+    this.mouse.x = (mouseEvent.clientX / this.renderer.domElement.clientWidth) * 2 - 1;
+    this.mouse.y = -(mouseEvent.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    var intersects = this.raycaster.intersectObjects(this.tweetMeshes);
+    return intersects;
+  }
+
   bringMeshToDetail(mesh) {
     this.detailedTweetMesh = mesh;
+    this.detailedTweetMeshRotation = {
+      x: (Math.random() - 0.5) * 0.01,
+      y: (Math.random() - 0.5) * 0.01,
+      z: (Math.random() - 0.5) * 0.01
+    };
 
     var tweet = mesh.__tweetData.tweet;
     this.detailTweetTextElement.innerHTML = '<b>' + tweet.username + '</b><br>' + urlify(tweet.text);
@@ -192,12 +223,7 @@ export class MainScene extends SheenScene {
       mesh.scale.set(properties.scale, properties.scale, properties.scale);
       this.detailTweetTextElement.style.opacity = properties.opacity;
     })
-    .easing(TWEEN.Easing.Quadratic.Out)
-    .start();
-
-    new TWEEN.Tween(mesh.rotation)
-    .to({x: Math.random() * PI2, y: Math.random() * PI2, z: Math.random() * PI2}, 1000)
-    .easing(TWEEN.Easing.Elastic.Out)
+    .easing(TWEEN.Easing.Cubic.Out)
     .start();
   }
 
