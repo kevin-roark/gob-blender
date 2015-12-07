@@ -108,4 +108,23 @@ a {
   padding: 5px;
   font-family: 'Helvetica', sans-serif; font-size: 13px;
   color: rgba(255, 255, 255, 0.87);
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
 }
+
+.stat-hud {
+  position: fixed;
+  right: 5px;
+  bottom: 5px;
+  font-family: monospace; font-size: 14px;
+  color: rgba(255, 255, 255, 0.87);
+  text-align: right;
+}
+  .stat-hud p {
+    margin: 0; padding: 0;
+  }
+  #good-tweet-count {
+    color: rgb(46, 238, 135);
+  }
+  #bad-tweet-count {
+    color: rgb(238, 46, 75);
+  }

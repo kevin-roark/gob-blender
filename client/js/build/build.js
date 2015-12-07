@@ -2590,9 +2590,13 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     this.tweetMeshes = [];
+    this.goodTweetCount = 0;
+    this.badTweetCount = 0;
 
     this.detailTweetTextElement = document.querySelector("#detail-tweet-text");
     this.tickerTweetTextElement = document.querySelector("#ticker-tweet-text");
+    this.goodTweetCountElement = document.querySelector("#good-tweet-count");
+    this.badTweetCountElement = document.querySelector("#bad-tweet-count");
 
     this.sounds = {};
     this.synth = new Tone.SimpleSynth({
@@ -2750,6 +2754,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     bringMeshToDetail: {
       value: function bringMeshToDetail(mesh) {
         this.detailedTweetMesh = mesh;
+        this.detailedTweetMesh.__positionBeforeDetail = mesh.position.clone();
         this.detailedTweetMeshRotation = {
           x: (Math.random() - 0.5) * 0.01,
           y: (Math.random() - 0.5) * 0.01,
@@ -2776,7 +2781,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         THREE.SceneUtils.detach(mesh, this.camera, this.scene);
 
         this.tweenMeshSickStyles(mesh, {
-          position: this.randomTweetMeshPosition(),
+          position: mesh.__positionBeforeDetail,
           scale: Math.random() * 4 + 0.1,
           detailOpacity: 0
         });
@@ -2809,11 +2814,24 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     handleNewTweet: {
       value: function handleNewTweet(tweetData) {
-        var _this = this;
-
         this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
 
+        if (tweetData.sentiment >= 0) {
+          this.goodTweetCount += 1;
+          this.goodTweetCountElement.innerText = this.goodTweetCount;
+        } else {
+          this.badTweetCount += 1;
+          this.badTweetCountElement.innerText = this.badTweetCount;
+        }
+
         this.makeGodSound(tweetData.sentiment);
+
+        this.addTweetMesh(tweetData);
+      }
+    },
+    addTweetMesh: {
+      value: function addTweetMesh(tweetData) {
+        var _this = this;
 
         var mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshLambertMaterial({
           color: this.colorForSentiment(tweetData.sentiment)
