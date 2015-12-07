@@ -92,7 +92,7 @@ a {
   box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
 }
 
-.tweet-text {
+.detail-tweet-text {
   opacity: 0.0;
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
   padding: 10px; max-width: 300px;
@@ -101,4 +101,11 @@ a {
   text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
   box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
   word-wrap: break-word;
+}
+
+.ticker-tweet-text {
+  position: fixed; left: 0; bottom: 0;
+  padding: 5px;
+  font-family: 'Helvetica', sans-serif; font-size: 13px;
+  color: rgba(255, 255, 255, 0.87);
 }

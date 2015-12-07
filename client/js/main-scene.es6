@@ -33,6 +33,10 @@ export class MainScene extends SheenScene {
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     this.tweetMeshes = [];
+
+    this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
+    this.tickerTweetTextElement = document.querySelector('#ticker-tweet-text');
+
     this.sounds = {};
     this.synth = new Tone.SimpleSynth({
 			"oscillator" : {
@@ -73,7 +77,6 @@ export class MainScene extends SheenScene {
       this.sounds[filename] = sound;
     });
 
-    this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
     this.sounds.background1loud.setVolume(70);
     this.sounds.background1loud.setTime(0);
     this.sounds.background1loud.play();
@@ -240,6 +243,8 @@ export class MainScene extends SheenScene {
   }
 
   handleNewTweet(tweetData) {
+    this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
+
     this.makeGodSound(tweetData.sentiment);
 
     var mesh = new THREE.Mesh(
