@@ -6,9 +6,10 @@ var kt = require('kutility');
 
 import {SheenScene} from './sheen-scene.es6';
 
-var MAX_MESH_COUNT = 300;
-var TWEETS_PER_SECOND = 7;
+var MAX_MESH_COUNT = 150;
+var TWEETS_PER_SECOND = 3;
 var PI2 = Math.PI * 2;
+var SCENE_RADIUS = 50;
 
 export class MainScene extends SheenScene {
 
@@ -19,11 +20,6 @@ export class MainScene extends SheenScene {
     super(renderer, camera, scene, options);
 
     this.onPhone = options.onPhone || false;
-
-    this.raycaster = new THREE.Raycaster();
-    this.mouse = new THREE.Vector2();
-    this.tweetMeshes = [];
-    this.sounds = {};
     this.useSkybox = false;
     this.useMeshImages = true;
     this.useSentimentColor = true;
@@ -31,6 +27,11 @@ export class MainScene extends SheenScene {
     this.usePercussion = false;
     this.useInstruments = true;
 
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+    this.tweetMeshes = [];
+    this.sounds = {};
+    this.cameraRotationAngle = 0;
 
     var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
     soundFilenames.forEach((filename) => {
@@ -43,16 +44,11 @@ export class MainScene extends SheenScene {
     });
 
     var soundFilenames2 = [];
-    for (var i = 0; i < 31; i++) {
-      var soundnum = i+1;
-      var sound = 'hh'+soundnum;
-      soundFilenames2.push(sound);
+    for (var i = 1; i <= 31; i++) {
+      soundFilenames2.push('hh' + i);
     }
-
-    for (var i = 0; i < 19; i++) {
-      var soundnum = i+1;
-      var sound = 'kick'+soundnum;
-      soundFilenames2.push(sound);
+    for (var i = 1; i <= 19; i++) {
+      soundFilenames2.push('kick' + i);
     }
 
     soundFilenames2.forEach((filename) => {
@@ -72,7 +68,7 @@ export class MainScene extends SheenScene {
     this.socket = io('http://localhost:6001');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
 
-    if(this.useSkybox){
+    if (this.useSkybox) {
         var imagePrefix = "media/textures/skybox/";
       	var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
       	var imageSuffix = ".jpg";
@@ -110,6 +106,13 @@ export class MainScene extends SheenScene {
 
   update(dt) {
     super.update(dt);
+
+    this.cameraRotationAngle += 0.002;
+
+    this.camera.position.x = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
+    this.camera.position.y = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
+    this.camera.position.z = SCENE_RADIUS * Math.cos(this.cameraRotationAngle);
+    this.camera.lookAt(this.scene.position);
   }
 
   // Interaction
@@ -143,56 +146,68 @@ export class MainScene extends SheenScene {
     this.detailedTweetMesh = mesh;
 
     var tweet = mesh.__tweetData.tweet;
-    this.detailTweetTextElement.style.display = 'block';
     this.detailTweetTextElement.innerHTML = '<b>' + tweet.username + '</b><br>' + urlify(tweet.text);
 
-    this.tweenMeshSickStyles(mesh, {x: 0, y: 1, z: -25}, 12);
+    THREE.SceneUtils.attach(mesh, this.scene, this.camera);
+
+    this.tweenMeshSickStyles(mesh, {
+      position: {x: 0, y: 1, z: -25},
+      scale: 12,
+      detailOpacity: 1.0
+    });
   }
 
   bringDetailTweetBackHome() {
     var mesh = this.detailedTweetMesh;
     this.detailedTweetMesh = null;
-    this.detailTweetTextElement.style.display = 'none';
 
-    this.tweenMeshSickStyles(mesh, this.randomTweetMeshPosition(), Math.random() * 4 + 0.1);
+    THREE.SceneUtils.detach(mesh, this.camera, this.scene);
+
+    this.tweenMeshSickStyles(mesh, {
+      position: this.randomTweetMeshPosition(),
+      scale: Math.random() * 4 + 0.1,
+      detailOpacity: 0.0
+    });
   }
 
-  tweenMeshSickStyles(mesh, position, scale) {
+  tweenMeshSickStyles(mesh, options) {
+    var position = options.position;
+    var scale = options.scale !== undefined ? options.scale : 1;
+    var detailOpacity = options.detailOpacity !== undefined ? options.detailOpacity : 1.0;
+
     var properties = {
       x: mesh.position.x, y: mesh.position.y, z: mesh.position.z,
       scale: mesh.scale.x,
-      rx: mesh.rotation.x, ry: mesh.rotation.y, rz: mesh.rotation.z
+      opacity: parseFloat(this.detailTweetTextElement.style.opacity)
     };
-
     var target = {
       x: position.x, y: position.y, z: position.z,
       scale: scale,
-      rx: Math.random() * PI2, ry: Math.random() * PI2, rz: Math.random() * PI2
+      opacity: detailOpacity
     };
-
-    var tween = new TWEEN.Tween(properties)
-    .to(target, 2000)
+    new TWEEN.Tween(properties)
+    .to(target, 500)
     .onUpdate(() => {
       mesh.position.set(properties.x, properties.y, properties.z);
-      mesh.rotation.set(properties.rx, properties.ry, properties.rz);
       mesh.scale.set(properties.scale, properties.scale, properties.scale);
+      this.detailTweetTextElement.style.opacity = properties.opacity;
     })
-    .easing(TWEEN.Easing.Elastic.Out);
+    .easing(TWEEN.Easing.Quadratic.Out)
+    .start();
 
-    tween.start();
+    new TWEEN.Tween(mesh.rotation)
+    .to({x: Math.random() * PI2, y: Math.random() * PI2, z: Math.random() * PI2}, 1000)
+    .easing(TWEEN.Easing.Elastic.Out)
+    .start();
   }
 
   handleNewTweet(tweetData) {
-    console.log('new tweet');
-
     this.makeGodSound(tweetData.sentiment);
 
     var mesh = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
       new THREE.MeshLambertMaterial({
-        color: this.colorForSentiment(tweetData.sentiment),
-        transparent: true,
-        opacity: Math.random() * 0.2 + 0.8,
+        color: this.colorForSentiment(tweetData.sentiment)
         //map: this.religionTextureForSentiment(tweetData.sentiment)
       })
     );
@@ -235,9 +250,9 @@ export class MainScene extends SheenScene {
 
   randomTweetMeshPosition() {
     return new THREE.Vector3(
-      (Math.random() - 0.5) * 50,
-      (Math.random() - 0.5) * 30,
-      Math.random() * -150 - 18
+      (Math.random() - 0.5) * 150,
+      (Math.random() - 0.5) * 150,
+      (Math.random() - 0.5) * 150
     );
   }
 
