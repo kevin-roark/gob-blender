@@ -2565,7 +2565,7 @@ var SheenScene = require("./sheen-scene.es6").SheenScene;
 
 var MAX_MESH_COUNT = 150;
 var TWEETS_PER_SECOND = 3;
-var SCENE_RADIUS = 50;
+var SCENE_RADIUS = 100;
 
 var MainScene = exports.MainScene = (function (_SheenScene) {
 
@@ -2579,13 +2579,17 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     _get(Object.getPrototypeOf(MainScene.prototype), "constructor", this).call(this, renderer, camera, scene, options);
 
     this.onPhone = options.onPhone || false;
-    this.useSkybox = true;
+    this.useSkybox = false;
+    this.useSkysphere = true;
+    this.skyboxNum = 1;
+    this.skysphereNum = 9;
     this.useMeshImages = true;
     this.useSentimentColor = true;
     this.useRandomColor = false;
     this.usePercussion = true;
     this.useInstruments = true;
     this.useSynth = false;
+    this.soundOn = true;
 
     this.cameraRotationAngle = 0;
     this.raycaster = new THREE.Raycaster();
@@ -2656,13 +2660,15 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
     this.sounds.background1loud.setVolume(70);
     this.sounds.background1loud.setTime(0);
-    this.sounds.background1loud.play();
+    if (this.soundOn) {
+      this.sounds.background1loud.play();
+    }
 
     this.socket = io("http://localhost:6001");
     this.socket.on("fresh-tweet", this.handleNewTweet.bind(this));
 
     if (this.useSkybox) {
-      var imagePrefix = "media/textures/skybox/";
+      var imagePrefix = "media/textures/skybox" + this.skyboxNum + "/";
       var directions = ["px", "nx", "py", "ny", "pz", "nz"];
       var imageSuffix = ".jpg";
       var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
@@ -2675,6 +2681,13 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
       var skyMaterial = new THREE.MeshFaceMaterial(materialArray);
       var skyBox = new THREE.Mesh(skyGeometry, skyMaterial);
       this.scene.add(skyBox);
+    }
+
+    if (this.useSkysphere) {
+      var skytexture = THREE.ImageUtils.loadTexture("media/textures/360sky/360sky" + this.skysphereNum + ".jpg", THREE.UVMapping);
+      var skymesh = new THREE.Mesh(new THREE.SphereGeometry(500, 60, 40), new THREE.MeshBasicMaterial({ map: skytexture }));
+      skymesh.scale.x = -1;
+      scene.add(skymesh);
     }
   }
 
@@ -2846,7 +2859,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
         this.processLanguage(tweetData.tweet);
 
-        this.makeGodSound(tweetData.sentiment);
+        if (this.soundOn) {
+          this.makeGodSound(tweetData.sentiment);
+        }
 
         this.addTweetMesh(tweetData);
       }
@@ -2939,7 +2954,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     randomTweetMeshPosition: {
       value: function randomTweetMeshPosition() {
-        return new THREE.Vector3((Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150);
+        return new THREE.Vector3((Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100);
       }
     },
     religionTextureForSentiment: {

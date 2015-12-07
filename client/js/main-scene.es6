@@ -11,7 +11,7 @@ import {SheenScene} from './sheen-scene.es6';
 
 var MAX_MESH_COUNT = 150;
 var TWEETS_PER_SECOND = 3;
-var SCENE_RADIUS = 50;
+var SCENE_RADIUS = 100;
 
 export class MainScene extends SheenScene {
 
@@ -19,110 +19,121 @@ export class MainScene extends SheenScene {
 
 
   constructor(renderer, camera, scene, options) {
-    super(renderer, camera, scene, options);
+  super(renderer, camera, scene, options);
 
-    this.onPhone = options.onPhone || false;
-    this.useSkybox = true;
-    this.useMeshImages = true;
-    this.useSentimentColor = true;
-    this.useRandomColor = false;
-    this.usePercussion = true;
-    this.useInstruments = true;
-    this.useSynth = false;
+  this.onPhone = options.onPhone || false;
+  this.useSkybox = false;
+  this.useSkysphere = true;
+  this.skyboxNum = 1;
+  this.skysphereNum = 9;
+  this.useMeshImages = true;
+  this.useSentimentColor = true;
+  this.useRandomColor = false;
+  this.usePercussion = true;
+  this.useInstruments = true;
+  this.useSynth = false;
+  this.soundOn = true;
 
-    this.cameraRotationAngle = 0;
-    this.raycaster = new THREE.Raycaster();
-    this.mouse = new THREE.Vector2();
-    this.tweetMeshes = [];
-    this.goodTweetCount = 0;
-    this.badTweetCount = 0;
-    this.totalSentiment = 0;
+  this.cameraRotationAngle = 0;
+  this.raycaster = new THREE.Raycaster();
+  this.mouse = new THREE.Vector2();
+  this.tweetMeshes = [];
+  this.goodTweetCount = 0;
+  this.badTweetCount = 0;
+  this.totalSentiment = 0;
 
-    this.nounTracker = new WordTracker({bannedWords: ['god', 'rt']});
-    this.verbTracker = new WordTracker({bannedWords: ['is', 'rt']});
-    this.adjectiveTracker = new WordTracker();
+  this.nounTracker = new WordTracker({bannedWords: ['god', 'rt']});
+  this.verbTracker = new WordTracker({bannedWords: ['is', 'rt']});
+  this.adjectiveTracker = new WordTracker();
 
-    this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
-    this.tickerTweetTextElement = document.querySelector('#ticker-tweet-text');
-    this.goodTweetCountElement = document.querySelector('#good-tweet-count');
-    this.badTweetCountElement = document.querySelector('#bad-tweet-count');
-    this.totalSentimentElement = document.querySelector('#total-sentiment');
-    this.godAdjectiveElement = document.querySelector('#god-adjective');
-    this.godVerbElement = document.querySelector('#god-verb');
-    this.mostFrequentNounsElement = document.querySelector('#most-frequent-nouns-list');
-    this.mostFrequentVerbsElement = document.querySelector('#most-frequent-verbs-list');
-    this.mostFrequentAdjectivesElement = document.querySelector('#most-frequent-adjectives-list');
+  this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
+  this.tickerTweetTextElement = document.querySelector('#ticker-tweet-text');
+  this.goodTweetCountElement = document.querySelector('#good-tweet-count');
+  this.badTweetCountElement = document.querySelector('#bad-tweet-count');
+  this.totalSentimentElement = document.querySelector('#total-sentiment');
+  this.godAdjectiveElement = document.querySelector('#god-adjective');
+  this.godVerbElement = document.querySelector('#god-verb');
+  this.mostFrequentNounsElement = document.querySelector('#most-frequent-nouns-list');
+  this.mostFrequentVerbsElement = document.querySelector('#most-frequent-verbs-list');
+  this.mostFrequentAdjectivesElement = document.querySelector('#most-frequent-adjectives-list');
 
-    this.sounds = {};
-    this.synthVolume = -8;
-    this.panner = new Tone.Panner().toMaster();
-    this.synth = new Tone.SimpleSynth({
-			"oscillator" : {
-				"type" : "triangle"
-			},
-			"envelope" : {
-				"attack" : 0.01,
-				"decay" : 0.2,
-				"sustain" : 0.4,
-				"release" : 0.2,
-			}
-		}).connect(this.panner);
+  this.sounds = {};
+  this.synthVolume = -8;
+  this.panner = new Tone.Panner().toMaster();
+  this.synth = new Tone.SimpleSynth({
+    "oscillator" : {
+      "type" : "triangle"
+    },
+    "envelope" : {
+      "attack" : 0.01,
+      "decay" : 0.2,
+      "sustain" : 0.4,
+      "release" : 0.2,
+    }
+  }).connect(this.panner);
 
-    this.panner.pan.value = 1;
-    this.synth.volume.value = this.synthVolume;
+  this.panner.pan.value = 1;
+  this.synth.volume.value = this.synthVolume;
 
-    var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
-    soundFilenames.forEach((filename) => {
-      var sound = new buzz.sound('/media/sound/instruments/' + filename, {
-        formats: ['mp3', 'ogg'],
-        webAudioApi: true,
-        volume: 30
-      });
-      this.sounds[filename] = sound;
+  var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
+  soundFilenames.forEach((filename) => {
+    var sound = new buzz.sound('/media/sound/instruments/' + filename, {
+      formats: ['mp3', 'ogg'],
+      webAudioApi: true,
+      volume: 30
     });
+    this.sounds[filename] = sound;
+  });
 
-    var soundFilenames2 = [];
-    for (var i = 1; i <= 31; i++) {
-      soundFilenames2.push('hh' + i);
-    }
-    for (var i = 1; i <= 19; i++) {
-      soundFilenames2.push('kick' + i);
-    }
-
-    soundFilenames2.forEach((filename) => {
-      var sound = new buzz.sound('/media/sound/percussion/' + filename, {
-        formats: ['mp3'],
-        webAudioApi: true,
-        volume: 30
-      });
-      this.sounds[filename] = sound;
-    });
-
-    this.sounds.background1loud.setVolume(70);
-    this.sounds.background1loud.setTime(0);
-    this.sounds.background1loud.play();
-
-    this.socket = io('http://localhost:6001');
-    this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
-
-    if (this.useSkybox) {
-      var imagePrefix = "media/textures/skybox/";
-      var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
-      var imageSuffix = ".jpg";
-      var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
-
-      var materialArray = [];
-      for (var i = 0; i < 6; i++)
-        materialArray.push( new THREE.MeshBasicMaterial({
-          map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
-          side: THREE.BackSide
-        }));
-      var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
-      var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
-      this.scene.add(skyBox);
-    }
-
+  var soundFilenames2 = [];
+  for (var i = 1; i <= 31; i++) {
+    soundFilenames2.push('hh' + i);
   }
+  for (var i = 1; i <= 19; i++) {
+    soundFilenames2.push('kick' + i);
+  }
+
+  soundFilenames2.forEach((filename) => {
+    var sound = new buzz.sound('/media/sound/percussion/' + filename, {
+      formats: ['mp3'],
+      webAudioApi: true,
+      volume: 30
+    });
+    this.sounds[filename] = sound;
+  });
+
+  this.sounds.background1loud.setVolume(70);
+  this.sounds.background1loud.setTime(0);
+  if(this.soundOn){ this.sounds.background1loud.play(); }
+
+  this.socket = io('http://localhost:6001');
+  this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
+
+  if (this.useSkybox) {
+    var imagePrefix = "media/textures/skybox"+this.skyboxNum+"/";
+    var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
+    var imageSuffix = ".jpg";
+    var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
+
+    var materialArray = [];
+    for (var i = 0; i < 6; i++)
+      materialArray.push( new THREE.MeshBasicMaterial({
+        map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
+        side: THREE.BackSide
+      }));
+    var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
+    var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
+    this.scene.add(skyBox);
+  }
+
+  if (this.useSkysphere){
+      var skytexture = THREE.ImageUtils.loadTexture( 'media/textures/360sky/360sky'+this.skysphereNum+".jpg", THREE.UVMapping);
+      var skymesh = new THREE.Mesh( new THREE.SphereGeometry( 500, 60, 40 ), new THREE.MeshBasicMaterial( { map: skytexture } ) );
+			skymesh.scale.x = -1;
+			scene.add( skymesh );
+    }
+
+}
 
   /// Overrides
 
@@ -281,7 +292,9 @@ export class MainScene extends SheenScene {
 
     this.processLanguage(tweetData.tweet);
 
-    this.makeGodSound(tweetData.sentiment);
+    if (this.soundOn){
+      this.makeGodSound(tweetData.sentiment);
+    }
 
     this.addTweetMesh(tweetData);
   }
@@ -367,9 +380,9 @@ export class MainScene extends SheenScene {
 
   randomTweetMeshPosition() {
     return new THREE.Vector3(
-      (Math.random() - 0.5) * 150,
-      (Math.random() - 0.5) * 150,
-      (Math.random() - 0.5) * 150
+      (Math.random() - 0.5) * 100,
+      (Math.random() - 0.5) * 100,
+      (Math.random() - 0.5) * 100
     );
   }
 

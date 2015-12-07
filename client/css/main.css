@@ -109,7 +109,7 @@ a {
 }
   .ticker-tweet-text {
     margin-top: 2px;
-    font-family: 'Helvetica', sans-serif; font-size: 14px;
+    font-family: 'Helvetica', sans-serif; font-size: 18px;
     color: rgba(255, 255, 255, 0.87);
     text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
   }
@@ -118,7 +118,7 @@ a {
   position: fixed;
   right: 5px;
   bottom: 5px;
-  font-family: monospace; font-size: 14px;
+  font-family: monospace; font-size: 18px;
   color: rgba(255, 255, 255, 0.87);
   text-align: right;
 }
