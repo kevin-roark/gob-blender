@@ -4,6 +4,7 @@ var TWEEN = require('tween.js');
 var io = require('socket.io-client');
 var kt = require('kutility');
 var Tone = require('tone');
+var nlp = require("nlp_compromise");
 
 import {SheenScene} from './sheen-scene.es6';
 
@@ -33,6 +34,10 @@ export class MainScene extends SheenScene {
     this.useInstruments = false;
     this.useSynth = true;
 
+    //initial values
+    this.synthVolume = -8;
+
+    this.panner = new Tone.Panner().toMaster();
     this.synth = new Tone.SimpleSynth({
 			"oscillator" : {
 				"type" : "triangle"
@@ -43,7 +48,10 @@ export class MainScene extends SheenScene {
 				"sustain" : 0.4,
 				"release" : 0.2,
 			}
-		}).toMaster();
+		}).connect(this.panner);
+
+    this.panner.pan.value = 1;
+    this.synth.volume.value = this.synthVolume;
 
     var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
     soundFilenames.forEach((filename) => {
@@ -199,6 +207,8 @@ export class MainScene extends SheenScene {
     console.log('new tweet');
 
     this.makeGodSound(tweetData.sentiment);
+    var s = nlp.pos(tweetData.tweet.text).sentences[0];
+    console.log(s.adjectives().forEach(function(el) {console.log(el);}));
 
     var mesh = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
