@@ -103,13 +103,16 @@ a {
   word-wrap: break-word;
 }
 
-.ticker-tweet-text {
+.tweet-ticker {
   position: fixed; left: 0; bottom: 0;
   padding: 5px;
-  font-family: 'Helvetica', sans-serif; font-size: 13px;
-  color: rgba(255, 255, 255, 0.87);
-  text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
 }
+  .ticker-tweet-text {
+    margin-top: 2px;
+    font-family: 'Helvetica', sans-serif; font-size: 14px;
+    color: rgba(255, 255, 255, 0.87);
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
+  }
 
 .stat-hud {
   position: fixed;

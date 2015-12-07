@@ -26,9 +26,9 @@ export class MainScene extends SheenScene {
     this.useMeshImages = true;
     this.useSentimentColor = true;
     this.useRandomColor = false;
-    this.usePercussion = false;
-    this.useInstruments = false;
-    this.useSynth = true;
+    this.usePercussion = true;
+    this.useInstruments = true;
+    this.useSynth = false;
 
     this.cameraRotationAngle = 0;
     this.raycaster = new THREE.Raycaster();
@@ -37,10 +37,19 @@ export class MainScene extends SheenScene {
     this.goodTweetCount = 0;
     this.badTweetCount = 0;
 
+    this.nounTracker = new WordTracker({bannedWords: ['god', 'rt']});
+    this.verbTracker = new WordTracker({bannedWords: ['is', 'rt']});
+    this.adjectiveTracker = new WordTracker();
+
     this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
     this.tickerTweetTextElement = document.querySelector('#ticker-tweet-text');
     this.goodTweetCountElement = document.querySelector('#good-tweet-count');
     this.badTweetCountElement = document.querySelector('#bad-tweet-count');
+    this.godAdjectiveElement = document.querySelector('#god-adjective');
+    this.godVerbElement = document.querySelector('#god-verb');
+    this.mostFrequentNounsElement = document.querySelector('#most-frequent-nouns-list');
+    this.mostFrequentVerbsElement = document.querySelector('#most-frequent-verbs-list');
+    this.mostFrequentAdjectivesElement = document.querySelector('#most-frequent-adjectives-list');
 
     this.sounds = {};
     this.synthVolume = -8;
@@ -265,11 +274,45 @@ export class MainScene extends SheenScene {
       this.badTweetCountElement.innerText = this.badTweetCount;
     }
 
+    this.processLanguage(tweetData.tweet);
+
     this.makeGodSound(tweetData.sentiment);
-    var s = nlp.pos(tweetData.tweet.text).sentences[0];
-    console.log(s.adjectives().forEach(function(el) {console.log(el);}));
 
     this.addTweetMesh(tweetData);
+  }
+
+  processLanguage(tweet) {
+    var sentence = nlp.pos(tweet.text).sentences[0];
+    var nouns = sentence.nouns(), verbs = sentence.verbs(), adjectives = sentence.adjectives();
+
+    function getWords(wordObjects) {
+      var words = [];
+      for (var i = 0; i < wordObjects.length; i++) {
+        words.push(wordObjects[i].text);
+      }
+      return words;
+    }
+
+    if (nouns.length > 0) {
+      this.nounTracker.track(getWords(nouns));
+      this.mostFrequentNounsElement.innerText = this.nounTracker.mostFrequentWordsList();
+    }
+
+    if (verbs.length > 0) {
+      this.verbTracker.track(getWords(verbs));
+      this.mostFrequentVerbsElement.innerText = this.verbTracker.mostFrequentWordsList();
+
+      var conjugation = kt.choice(verbs).analysis.conjugate();
+      this.godVerbElement.innerText = conjugation.gerund;
+    }
+
+    if (adjectives.length > 0) {
+      var adjectiveWords = getWords(adjectives);
+      this.adjectiveTracker.track(adjectiveWords);
+      this.mostFrequentAdjectivesElement.innerText = this.adjectiveTracker.mostFrequentWordsList();
+
+      this.godAdjectiveElement.innerText = kt.choice(adjectiveWords);
+    }
   }
 
   addTweetMesh(tweetData) {
@@ -535,4 +578,56 @@ function urlify(text) {
     return text.replace(urlRegex, function(url) {
         return '<a target="_blank" href="' + url + '">' + url + '</a>';
     });
+}
+
+class WordTracker {
+  constructor(options) {
+    if (!options) options = {};
+    this.numberOfMostFrequentWords = options.numberOfMostFrequentWords || 3;
+    this.bannedWords = options.bannedWords || [];
+
+    this.countmap = {};
+    this.mostFrequentWords = [];
+  }
+
+  track(words) {
+    for (var i = 0; i < words.length; i++) {
+      var word = words[i].replace(/\s/g, '');
+      if (word.length === 0 || this.bannedWords.indexOf(word.toLowerCase()) >= 0) {
+        continue;
+      }
+
+      var count = this.countmap[word] || 0;
+      count += 1;
+      this.countmap[word] = count;
+
+      for (var j = 0; j < this.numberOfMostFrequentWords; j++) {
+        var frequentWord = this.mostFrequentWords[j];
+        var frequentWordCount = this.countmap[frequentWord] || 0;
+        if (count > frequentWordCount) {
+          // this becomes a frequent word
+          var currentIndex = this.mostFrequentWords.indexOf(word);
+          if (currentIndex >= 0) {
+            // already in list, swap
+            this.mostFrequentWords[currentIndex] = frequentWord;
+            this.mostFrequentWords[j] = word;
+          }
+          else {
+            // insert into list
+            this.mostFrequentWords.splice(j, 0, word);
+            if (this.mostFrequentWords.length > this.numberOfMostFrequentWords) {
+              this.mostFrequentWords.pop();
+            }
+          }
+
+          break; // get out
+        }
+      }
+    }
+  }
+
+  mostFrequentWordsList() {
+    return this.mostFrequentWords.join(', ');
+  }
+
 }
