@@ -1,3 +1,4 @@
+
 var THREE = require('three');
 var buzz = require('./lib/buzz');
 var TWEEN = require('tween.js');
@@ -8,9 +9,9 @@ var nlp = require("nlp_compromise");
 
 import {SheenScene} from './sheen-scene.es6';
 
-var MAX_MESH_COUNT = 300;
-var TWEETS_PER_SECOND = 4;
-var PI2 = Math.PI * 2;
+var MAX_MESH_COUNT = 150;
+var TWEETS_PER_SECOND = 3;
+var SCENE_RADIUS = 50;
 
 export class MainScene extends SheenScene {
 
@@ -21,12 +22,7 @@ export class MainScene extends SheenScene {
     super(renderer, camera, scene, options);
 
     this.onPhone = options.onPhone || false;
-
-    this.raycaster = new THREE.Raycaster();
-    this.mouse = new THREE.Vector2();
-    this.tweetMeshes = [];
-    this.sounds = {};
-    this.useSkybox = false;
+    this.useSkybox = true;
     this.useMeshImages = true;
     this.useSentimentColor = true;
     this.useRandomColor = false;
@@ -34,9 +30,20 @@ export class MainScene extends SheenScene {
     this.useInstruments = false;
     this.useSynth = true;
 
-    //initial values
-    this.synthVolume = -8;
+    this.cameraRotationAngle = 0;
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+    this.tweetMeshes = [];
+    this.goodTweetCount = 0;
+    this.badTweetCount = 0;
 
+    this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
+    this.tickerTweetTextElement = document.querySelector('#ticker-tweet-text');
+    this.goodTweetCountElement = document.querySelector('#good-tweet-count');
+    this.badTweetCountElement = document.querySelector('#bad-tweet-count');
+
+    this.sounds = {};
+    this.synthVolume = -8;
     this.panner = new Tone.Panner().toMaster();
     this.synth = new Tone.SimpleSynth({
 			"oscillator" : {
@@ -64,16 +71,11 @@ export class MainScene extends SheenScene {
     });
 
     var soundFilenames2 = [];
-    for (var i = 0; i < 31; i++) {
-      var soundnum = i+1;
-      var sound = 'hh'+soundnum;
-      soundFilenames2.push(sound);
+    for (var i = 1; i <= 31; i++) {
+      soundFilenames2.push('hh' + i);
     }
-
-    for (var i = 0; i < 19; i++) {
-      var soundnum = i+1;
-      var sound = 'kick'+soundnum;
-      soundFilenames2.push(sound);
+    for (var i = 1; i <= 19; i++) {
+      soundFilenames2.push('kick' + i);
     }
 
     soundFilenames2.forEach((filename) => {
@@ -85,7 +87,6 @@ export class MainScene extends SheenScene {
       this.sounds[filename] = sound;
     });
 
-    this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
     this.sounds.background1loud.setVolume(70);
     this.sounds.background1loud.setTime(0);
     this.sounds.background1loud.play();
@@ -93,21 +94,21 @@ export class MainScene extends SheenScene {
     this.socket = io('http://localhost:6001');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
 
-    if(this.useSkybox){
-        var imagePrefix = "media/textures/skybox/";
-      	var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
-      	var imageSuffix = ".jpg";
-      	var skyGeometry = new THREE.CubeGeometry( 10000, 10000, 10000 );
+    if (this.useSkybox) {
+      var imagePrefix = "media/textures/skybox/";
+      var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
+      var imageSuffix = ".jpg";
+      var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
 
-      	var materialArray = [];
-      	for (var i = 0; i < 6; i++)
-      		materialArray.push( new THREE.MeshBasicMaterial({
-      			map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
-      			side: THREE.BackSide
-      		}));
-      	var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
-      	var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
-      	this.scene.add(skyBox);
+      var materialArray = [];
+      for (var i = 0; i < 6; i++)
+        materialArray.push( new THREE.MeshBasicMaterial({
+          map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
+          side: THREE.BackSide
+        }));
+      var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
+      var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
+      this.scene.add(skyBox);
     }
 
   }
@@ -131,6 +132,19 @@ export class MainScene extends SheenScene {
 
   update(dt) {
     super.update(dt);
+
+    this.cameraRotationAngle += 0.002;
+
+    this.camera.position.x = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
+    this.camera.position.y = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
+    this.camera.position.z = SCENE_RADIUS * Math.cos(this.cameraRotationAngle);
+    this.camera.lookAt(this.scene.position);
+
+    if (this.detailedTweetMesh) {
+      this.detailedTweetMesh.rotation.x += this.detailedTweetMeshRotation.x;
+      this.detailedTweetMesh.rotation.y += this.detailedTweetMeshRotation.y;
+      this.detailedTweetMesh.rotation.z += this.detailedTweetMeshRotation.z;
+    }
   }
 
   // Interaction
@@ -139,20 +153,29 @@ export class MainScene extends SheenScene {
 
   }
 
+  move(ev) {
+    super.move(ev);
+
+    var cursor = 'auto';
+
+    if (!this.detailedTweetMesh) {
+      var intersects = this.mouseIntersections(ev);
+      if (intersects.length > 0) cursor = 'pointer';
+    }
+
+    this.domContainer.css('cursor', cursor);
+  }
+
   click(ev) {
+    super.click(ev);
+
     if (this.detailedTweetMesh) {
       this.bringDetailTweetBackHome();
       return;
     }
 
     // find the mesh that was clicked and bring it into detail mode
-
-    this.mouse.x = (ev.clientX / this.renderer.domElement.clientWidth) * 2 - 1;
-    this.mouse.y = -(ev.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
-
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-
-    var intersects = this.raycaster.intersectObjects(this.tweetMeshes);
+    var intersects = this.mouseIntersections(ev);
 
     if (intersects.length > 0) {
       var firstIntersection = intersects[0].object;
@@ -160,62 +183,100 @@ export class MainScene extends SheenScene {
     }
   }
 
+  mouseIntersections(mouseEvent) {
+    this.mouse.x = (mouseEvent.clientX / this.renderer.domElement.clientWidth) * 2 - 1;
+    this.mouse.y = -(mouseEvent.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    var intersects = this.raycaster.intersectObjects(this.tweetMeshes);
+    return intersects;
+  }
+
   bringMeshToDetail(mesh) {
     this.detailedTweetMesh = mesh;
+    this.detailedTweetMesh.__positionBeforeDetail = mesh.position.clone();
+    this.detailedTweetMeshRotation = {
+      x: (Math.random() - 0.5) * 0.01,
+      y: (Math.random() - 0.5) * 0.01,
+      z: (Math.random() - 0.5) * 0.01
+    };
 
     var tweet = mesh.__tweetData.tweet;
-    this.detailTweetTextElement.style.display = 'block';
     this.detailTweetTextElement.innerHTML = '<b>' + tweet.username + '</b><br>' + urlify(tweet.text);
 
-    this.tweenMeshSickStyles(mesh, {x: 0, y: 1, z: -25}, 12);
+    THREE.SceneUtils.attach(mesh, this.scene, this.camera);
+
+    this.tweenMeshSickStyles(mesh, {
+      position: {x: 0, y: 1, z: -25},
+      scale: 12,
+      detailOpacity: 1.0
+    });
   }
 
   bringDetailTweetBackHome() {
     var mesh = this.detailedTweetMesh;
     this.detailedTweetMesh = null;
-    this.detailTweetTextElement.style.display = 'none';
 
-    this.tweenMeshSickStyles(mesh, this.randomTweetMeshPosition(), Math.random() * 4 + 0.1);
+    THREE.SceneUtils.detach(mesh, this.camera, this.scene);
+
+    this.tweenMeshSickStyles(mesh, {
+      position: mesh.__positionBeforeDetail,
+      scale: Math.random() * 4 + 0.1,
+      detailOpacity: 0.0
+    });
   }
 
-  tweenMeshSickStyles(mesh, position, scale) {
+  tweenMeshSickStyles(mesh, options) {
+    var position = options.position;
+    var scale = options.scale !== undefined ? options.scale : 1;
+    var detailOpacity = options.detailOpacity !== undefined ? options.detailOpacity : 1.0;
+
     var properties = {
       x: mesh.position.x, y: mesh.position.y, z: mesh.position.z,
       scale: mesh.scale.x,
-      rx: mesh.rotation.x, ry: mesh.rotation.y, rz: mesh.rotation.z
+      opacity: parseFloat(this.detailTweetTextElement.style.opacity)
     };
-
     var target = {
       x: position.x, y: position.y, z: position.z,
       scale: scale,
-      rx: Math.random() * PI2, ry: Math.random() * PI2, rz: Math.random() * PI2
+      opacity: detailOpacity
     };
-
-    var tween = new TWEEN.Tween(properties)
-    .to(target, 2000)
+    new TWEEN.Tween(properties)
+    .to(target, 500)
     .onUpdate(() => {
       mesh.position.set(properties.x, properties.y, properties.z);
-      mesh.rotation.set(properties.rx, properties.ry, properties.rz);
       mesh.scale.set(properties.scale, properties.scale, properties.scale);
+      this.detailTweetTextElement.style.opacity = properties.opacity;
     })
-    .easing(TWEEN.Easing.Elastic.Out);
-
-    tween.start();
+    .easing(TWEEN.Easing.Cubic.Out)
+    .start();
   }
 
   handleNewTweet(tweetData) {
-    console.log('new tweet');
+    this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
+
+    if (tweetData.sentiment >= 0) {
+      this.goodTweetCount += 1;
+      this.goodTweetCountElement.innerText = this.goodTweetCount;
+    }
+    else {
+      this.badTweetCount += 1;
+      this.badTweetCountElement.innerText = this.badTweetCount;
+    }
 
     this.makeGodSound(tweetData.sentiment);
     var s = nlp.pos(tweetData.tweet.text).sentences[0];
     console.log(s.adjectives().forEach(function(el) {console.log(el);}));
 
+    this.addTweetMesh(tweetData);
+  }
+
+  addTweetMesh(tweetData) {
     var mesh = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
       new THREE.MeshLambertMaterial({
-        color: this.colorForSentiment(tweetData.sentiment),
-        transparent: true,
-        opacity: Math.random() * 0.2 + 0.8,
+        color: this.colorForSentiment(tweetData.sentiment)
         //map: this.religionTextureForSentiment(tweetData.sentiment)
       })
     );
@@ -258,9 +319,9 @@ export class MainScene extends SheenScene {
 
   randomTweetMeshPosition() {
     return new THREE.Vector3(
-      (Math.random() - 0.5) * 50,
-      (Math.random() - 0.5) * 30,
-      Math.random() * -150 - 18
+      (Math.random() - 0.5) * 150,
+      (Math.random() - 0.5) * 150,
+      (Math.random() - 0.5) * 150
     );
   }
 

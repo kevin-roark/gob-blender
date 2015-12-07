@@ -69,6 +69,10 @@ export class SheenScene {
     }
   }
 
+  move() {
+
+  }
+
   resize() {
 
   }
