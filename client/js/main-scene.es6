@@ -57,7 +57,7 @@ export class MainScene extends SheenScene {
 			}
 		}).connect(this.panner);
 
-    this.panner.pan.value = 1;
+    this.panner.pan.value = 0.5;
     this.synth.volume.value = this.synthVolume;
 
     var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
@@ -370,115 +370,140 @@ export class MainScene extends SheenScene {
     if (score>15) {
       soundArray = [sounds.glock13];
       percSoundArray = [sounds.hh28,sounds.hh29,sounds.hh30,sounds.hh31,sounds.hh32];
+      noteArray = ["F9","G9"];
     }
     else if (score>14) {
       soundArray = [sounds.glock12];
       percSoundArray = [sounds.hh27,sounds.hh28,sounds.hh29,sounds.hh30,sounds.hh31];
+      noteArray = ["D9","E9"];
     }
     else if (score>13) {
       soundArray = [sounds.glock11];
       percSoundArray = [sounds.hh26,sounds.hh27,sounds.hh28,sounds.hh29,sounds.hh30];
+      noteArray = ["C9","D9"];
     }
     else if (score>12) {
       soundArray = [sounds.glock10];
       percSoundArray = [sounds.hh25,sounds.hh26,sounds.hh27,sounds.hh28,sounds.hh29];
+      noteArray = ["G8","A8"];
     }
     else if (score>11) {
       soundArray = [sounds.glock9];
       percSoundArray = [sounds.hh24,sounds.hh25,sounds.hh26,sounds.hh27,sounds.hh28];
+      noteArray = ["E8","F8"];
     }
     else if (score>10) {
       soundArray = [sounds.glock8];
       percSoundArray = [sounds.hh23,sounds.hh24,sounds.hh25,sounds.hh26,sounds.hh27];
+      noteArray = ["C8","D8"];
     }
     else if (score>9) {
       soundArray = [sounds.glock7];
       percSoundArray = [sounds.hh22,sounds.hh23,sounds.hh24,sounds.hh25,sounds.hh26];
+      noteArray = ["G7","A7"];
     }
     else if (score>8) {
       soundArray = [sounds.altglock6];
       percSoundArray = [sounds.hh21,sounds.hh22,sounds.hh23,sounds.hh24,sounds.hh25];
+      noteArray = ["E7","F7"];
     }
     else if (score>7) {
       soundArray = [sounds.altglock5];
       percSoundArray = [sounds.hh20,sounds.hh21,sounds.hh22,sounds.hh23,sounds.hh24];
+      noteArray = ["C7","D7"];
     }
     else if (score>6) {
       soundArray = [sounds.altglock4];
       percSoundArray = [sounds.hh10,sounds.hh11,sounds.hh12,sounds.hh13,sounds.hh14];
+      noteArray = ["G6","A6"];
     }
     else if (score>5) {
       soundArray = [sounds.altglock3];
       percSoundArray = [sounds.hh9,sounds.hh10,sounds.hh11,sounds.hh12,sounds.hh13];
+      noteArray = ["E6","F4"];
     }
     else if (score>4) {
       soundArray = [sounds.altglock2];
       percSoundArray = [sounds.hh8,sounds.hh9,sounds.hh10,sounds.hh11,sounds.hh12];
+      noteArray = ["C6","D6","E6"];
     }
     else if (score>3) {
       soundArray = [sounds.altglock1];
       percSoundArray = [sounds.hh7,sounds.hh8,sounds.hh9,sounds.hh10,sounds.hh11];
-      noteArray = ["C8","D8","E8","G8","A8","C9"];
+      noteArray = ["G5","A5","C6"];
     }
     else if (score>2) {
       soundArray = [sounds.mallet4,sounds.mallet5,sounds.mallet6,sounds.mallet7,sounds.mallet8];
       percSoundArray = [sounds.hh6,sounds.hh7,sounds.hh8,sounds.hh9,sounds.hh10];
-      noteArray = ["C7","D7","E7","G7","A7","C8"];
+      noteArray = ["E5","F5","G5","A5"];
     }
     else if (score>1) {
       soundArray = [sounds.mallet3,sounds.mallet4,sounds.mallet5,sounds.mallet6,sounds.mallet7];
       percSoundArray = [sounds.hh5,sounds.hh6,sounds.hh7,sounds.hh8,sounds.hh9];
-      noteArray = ["C6","D6","E6","G6","A6","C7"];
+      noteArray = ["C5","D5","E5","F5"];
     }
     else if (score>0) {
       soundArray = [sounds.mallet2,sounds.mallet3,sounds.mallet4,sounds.mallet5,sounds.mallet6];
       percSoundArray = [sounds.hh4,sounds.hh5,sounds.hh6,sounds.hh7,sounds.hh8];
-      noteArray = ["C5","D5","E5","G5","A5","C6"];
+      noteArray = ["G4","A4","C5","D5"];
     }
     else if (score>-1) {
       soundArray = [sounds.mallet1,sounds.mallet2,sounds.mallet3,sounds.mallet4,sounds.mallet5];
       percSoundArray = [sounds.hh3,sounds.hh4,sounds.hh5,sounds.hh6,sounds.hh7];
-      noteArray = ["C4","D4","E4","G4","A4","C5"];
+      noteArray = ["D4","E4","F4","G4"];
     }
     else if (score>-2) {
       soundArray = [sounds.dbass4,sounds.dbass5,sounds.dbass6,sounds.dbass7,sounds.dbass8];
       percSoundArray = [sounds.hh2,sounds.hh3,sounds.hh4,sounds.hh5,sounds.hh6];
+      noteArray = ["C4","D4","E4","F4"];
     }
     else if (score>-3) {
       soundArray = [sounds.dbass1,sounds.dbass2,sounds.dbass3,sounds.dbass4,sounds.dbass5];
       percSoundArray = [sounds.hh1,sounds.hh2,sounds.hh3,sounds.hh4,sounds.hh5];
+      noteArray = ["G3","A3"];
     }
     else if (score>-4) {
       soundArray = [sounds.cloud8];
       percSoundArray = [sounds.kick17, sounds.kick18, sounds.kick19, sounds.kick20];
+      noteArray = ["E3","F3"];
     }
     else if (score>-5) {
       soundArray = [sounds.clouds7];
       percSoundArray = [sounds.kick13, sounds.kick14, sounds.kick15, sounds.kick16];
+      noteArray = ["C3","D3"];
+
     }
     else if (score>-6) {
       soundArray = [sounds.clouds6];
       percSoundArray = [sounds.kick9, sounds.kick10, sounds.kick11, sounds.kick12];
+      noteArray = ["F2","G2","A2"];
+
     }
     else if (score>-7) {
       soundArray = [sounds.clouds5];
       percSoundArray = [sounds.kick6, sounds.kick7, sounds.kick8];
+      noteArray = ["C2","D2","E2"];
     }
     else if (score>-8) {
       soundArray = [sounds.clouds4];
       percSoundArray = [sounds.kick4, sounds.kick5];
+      noteArray = ["F1","G1","A1"];
     }
     else if (score>-9) {
       soundArray = [sounds.clouds3];
       percSoundArray = [sounds.kick3];
+      noteArray = ["C1","D1","E1"];
     }
     else if (score>-10) {
       soundArray = [sounds.clouds2];
       percSoundArray = [sounds.kick2];
+      noteArray = ["F0","G0","A0"];
+
     }
     else {
       soundArray = [sounds.clouds1];
       percSoundArray = [sounds.kick1];
+      noteArray = ["C0","D0","E0"];
     }
 
     if(this.useInstruments){
@@ -499,6 +524,7 @@ export class MainScene extends SheenScene {
 
     if(this.useSynth){
       var note = kt.choice(noteArray);
+      this.panner.pan.value = Math.random();
       this.synth.triggerAttackRelease(note, "8n");
     }
   }
