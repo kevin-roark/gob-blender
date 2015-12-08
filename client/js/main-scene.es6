@@ -106,7 +106,7 @@ export class MainScene extends SheenScene {
     this.sounds.background1loud.setTime(0);
     if (this.soundOn) { this.sounds.background1loud.play(); }
 
-    this.socket = io('http://localhost:6001');
+    this.socket = io('http://104.131.72.3:3201');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
 
     if (this.useSkybox) {
