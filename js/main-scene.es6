@@ -31,7 +31,7 @@ export class MainScene extends SheenScene {
     this.useRandomColor = false;
     this.usePercussion = true;
     this.useInstruments = true;
-    this.useSynth = true;
+    this.useSynth = false;
     this.soundOn = true;
     this.pushDelay = 5000;
 
