@@ -92,8 +92,8 @@ a {
   box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
 }
 
-.tweet-text {
-  display: none;
+.detail-tweet-text {
+  opacity: 0.0;
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
   padding: 10px; max-width: 300px;
   color: rgba(0, 0, 0, 0.87); background-color: #fefefe;
@@ -102,3 +102,33 @@ a {
   box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
   word-wrap: break-word;
 }
+
+.tweet-ticker {
+  position: fixed; left: 0; bottom: 0;
+  padding: 5px;
+}
+  .ticker-tweet-text {
+    margin-top: 2px;
+    font-family: 'Helvetica', sans-serif; font-size: 18px;
+    color: rgba(255, 255, 255, 0.87);
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
+  }
+
+.stat-hud {
+  position: fixed;
+  right: 5px;
+  bottom: 5px;
+  font-family: monospace; font-size: 18px;
+  color: rgba(255, 255, 255, 0.87);
+  text-align: right;
+}
+  .stat-hud p {
+    margin: 0; padding: 0;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
+  }
+  #good-tweet-count, #total-sentiment {
+    color: rgb(46, 238, 135);
+  }
+  #bad-tweet-count {
+    color: rgb(238, 46, 75);
+  }

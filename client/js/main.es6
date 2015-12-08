@@ -54,7 +54,7 @@ class Sheen extends ThreeBoiler {
 
     this.clock = new THREE.Clock();
 
-    var handleClick = (ev) => {
+    $(document).click((ev) => {
       if ($(ev.target).is('a')) {
         return;
       }
@@ -75,9 +75,11 @@ class Sheen extends ThreeBoiler {
       }
 
       this.mainScene.click(ev);
-    };
+    });
 
-    $(document).click(handleClick);
+    $(document).mousemove((ev) => {
+      this.mainScene.move(ev);
+    });
   }
 
   createScene() {
@@ -89,8 +91,6 @@ class Sheen extends ThreeBoiler {
       // here wanna apply new forces to objects and things based on state
       scene.simulate(undefined, 1);
     });
-
-    scene.fog = new THREE.Fog(0x111111, 1, 600);
 
     return scene;
   }
