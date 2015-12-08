@@ -9,7 +9,7 @@ var nlp = require("nlp_compromise");
 
 import {SheenScene} from './sheen-scene.es6';
 
-var MAX_MESH_COUNT = 150;
+var MAX_MESH_COUNT = 125;
 var TWEETS_PER_SECOND = 3;
 var SCENE_RADIUS = 100;
 
@@ -293,7 +293,7 @@ export class MainScene extends SheenScene {
     this.processLanguage(tweetData.tweet);
 
     if (this.soundOn){
-      setTimeout(this.makeGodSound(tweetData.sentiment), 2000);
+      setTimeout(() => { this.makeGodSound(tweetData.sentiment); }, 2000);
     }
 
     this.addTweetMesh(tweetData);
@@ -357,7 +357,7 @@ export class MainScene extends SheenScene {
     var meshTween = new TWEEN.Tween(scale).to({value: Math.random() * 2 + (tweetData.tweet.text.length / 40)}, 1000);
     meshTween.onUpdate(updateMeshScale);
     meshTween.easing(TWEEN.Easing.Circular.Out);
-    setTimeout( meshTween.start(), 2000);
+    setTimeout(() => { meshTween.start(); }, 2000);
 
     this.scene.add(mesh);
     this.tweetMeshes.push(mesh);

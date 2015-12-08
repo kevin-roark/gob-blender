@@ -2563,7 +2563,7 @@ var nlp = require("nlp_compromise");
 
 var SheenScene = require("./sheen-scene.es6").SheenScene;
 
-var MAX_MESH_COUNT = 150;
+var MAX_MESH_COUNT = 125;
 var TWEETS_PER_SECOND = 3;
 var SCENE_RADIUS = 100;
 
@@ -2844,6 +2844,8 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     handleNewTweet: {
       value: function handleNewTweet(tweetData) {
+        var _this = this;
+
         this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
 
         this.totalSentiment += tweetData.sentiment;
@@ -2860,7 +2862,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         this.processLanguage(tweetData.tweet);
 
         if (this.soundOn) {
-          setTimeout(this.makeGodSound(tweetData.sentiment), 2000);
+          setTimeout(function () {
+            _this.makeGodSound(tweetData.sentiment);
+          }, 2000);
         }
 
         this.addTweetMesh(tweetData);
@@ -2929,7 +2933,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         var meshTween = new TWEEN.Tween(scale).to({ value: Math.random() * 2 + tweetData.tweet.text.length / 40 }, 1000);
         meshTween.onUpdate(updateMeshScale);
         meshTween.easing(TWEEN.Easing.Circular.Out);
-        setTimeout(meshTween.start(), 2000);
+        setTimeout(function () {
+          meshTween.start();
+        }, 2000);
 
         this.scene.add(mesh);
         this.tweetMeshes.push(mesh);
