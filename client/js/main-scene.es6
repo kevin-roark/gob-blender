@@ -25,7 +25,7 @@ export class MainScene extends SheenScene {
     this.useSkybox = false;
     this.useSkysphere = true;
     this.skyboxNum = 1;
-    this.skysphereNum = 3;
+    this.skysphereNum = 9;
     this.useMeshImages = true;
     this.useSentimentColor = true;
     this.useRandomColor = false;
@@ -33,7 +33,7 @@ export class MainScene extends SheenScene {
     this.useInstruments = true;
     this.useSynth = true;
     this.soundOn = true;
-    //this.pushDelay = 0;
+    this.pushDelay = 5000;
 
     this.cameraRotationAngle = 0;
     this.raycaster = new THREE.Raycaster();
@@ -156,8 +156,8 @@ export class MainScene extends SheenScene {
 			scene.add( skymesh );
     }
 
-    this.makeHoldNotes();
-    this.makeHoldNotes2();
+    if (this.soundOn) {this.makeHoldNotes();}
+    if (this.soundOn) {this.makeHoldNotes2();}
 
   }
 
@@ -319,7 +319,7 @@ export class MainScene extends SheenScene {
     this.processLanguage(tweetData.tweet);
 
     if (this.soundOn){
-      setTimeout(() => { this.makeGodSound(tweetData.sentiment); }, 2000);
+      setTimeout(() => { this.makeGodSound(tweetData.sentiment); }, this.pushDelay);
     }
 
     this.addTweetMesh(tweetData);
@@ -383,7 +383,7 @@ export class MainScene extends SheenScene {
     var meshTween = new TWEEN.Tween(scale).to({value: Math.random() * 2 + (tweetData.tweet.text.length / 40)}, 1000);
     meshTween.onUpdate(updateMeshScale);
     meshTween.easing(TWEEN.Easing.Circular.Out);
-    setTimeout(() => { meshTween.start(); }, 2000);
+    setTimeout(() => { meshTween.start(); }, this.pushDelay);
 
     this.scene.add(mesh);
     this.tweetMeshes.push(mesh);
@@ -427,7 +427,7 @@ export class MainScene extends SheenScene {
   }
 
   fuzzySentiment(score) {
-    if (score > 15) {
+    /* if (score > 15) {
       return 'amazing';
     }
     else if (score > 9) {
@@ -443,6 +443,19 @@ export class MainScene extends SheenScene {
       return 'bad';
     }
     else if (score > -10) {
+      return 'worse';
+    }
+    else {
+      return 'horrible';
+    }*/
+
+    if (score > 10) {
+      return 'amazing';
+    }
+    else if (score > 0) {
+      return 'great';
+    }
+    else if (score > -5) {
       return 'worse';
     }
     else {

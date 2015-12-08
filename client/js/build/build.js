@@ -2563,7 +2563,7 @@ var nlp = require("nlp_compromise");
 
 var SheenScene = require("./sheen-scene.es6").SheenScene;
 
-var MAX_MESH_COUNT = 150;
+var MAX_MESH_COUNT = 125;
 var TWEETS_PER_SECOND = 3;
 var SCENE_RADIUS = 100;
 
@@ -2582,7 +2582,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.useSkybox = false;
     this.useSkysphere = true;
     this.skyboxNum = 1;
-    this.skysphereNum = 3;
+    this.skysphereNum = 9;
     this.useMeshImages = true;
     this.useSentimentColor = true;
     this.useRandomColor = false;
@@ -2590,7 +2590,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.useInstruments = true;
     this.useSynth = true;
     this.soundOn = true;
-    //this.pushDelay = 0;
+    this.pushDelay = 5000;
 
     this.cameraRotationAngle = 0;
     this.raycaster = new THREE.Raycaster();
@@ -2712,8 +2712,12 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
       scene.add(skymesh);
     }
 
-    this.makeHoldNotes();
-    this.makeHoldNotes2();
+    if (this.soundOn) {
+      this.makeHoldNotes();
+    }
+    if (this.soundOn) {
+      this.makeHoldNotes2();
+    }
   }
 
   _inherits(MainScene, _SheenScene);
@@ -2869,6 +2873,8 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     handleNewTweet: {
       value: function handleNewTweet(tweetData) {
+        var _this = this;
+
         this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
 
         this.totalSentiment += tweetData.sentiment;
@@ -2885,7 +2891,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         this.processLanguage(tweetData.tweet);
 
         if (this.soundOn) {
-          this.makeGodSound(tweetData.sentiment);
+          setTimeout(function () {
+            _this.makeGodSound(tweetData.sentiment);
+          }, this.pushDelay);
         }
 
         this.addTweetMesh(tweetData);
@@ -2954,7 +2962,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         var meshTween = new TWEEN.Tween(scale).to({ value: Math.random() * 2 + tweetData.tweet.text.length / 40 }, 1000);
         meshTween.onUpdate(updateMeshScale);
         meshTween.easing(TWEEN.Easing.Circular.Out);
-        meshTween.start();
+        setTimeout(function () {
+          meshTween.start();
+        }, this.pushDelay);
 
         this.scene.add(mesh);
         this.tweetMeshes.push(mesh);
@@ -2999,17 +3009,33 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     fuzzySentiment: {
       value: function fuzzySentiment(score) {
-        if (score > 15) {
+        /* if (score > 15) {
+          return 'amazing';
+        }
+        else if (score > 9) {
+          return 'great';
+        }
+        else if (score > 3) {
+          return 'good';
+        }
+        else if (score > -2) {
+          return 'ok';
+        }
+        else if (score > -5) {
+          return 'bad';
+        }
+        else if (score > -10) {
+          return 'worse';
+        }
+        else {
+          return 'horrible';
+        }*/
+
+        if (score > 10) {
           return "amazing";
-        } else if (score > 9) {
+        } else if (score > 0) {
           return "great";
-        } else if (score > 3) {
-          return "good";
-        } else if (score > -2) {
-          return "ok";
         } else if (score > -5) {
-          return "bad";
-        } else if (score > -10) {
           return "worse";
         } else {
           return "horrible";
