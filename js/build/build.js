@@ -2860,7 +2860,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         this.processLanguage(tweetData.tweet);
 
         if (this.soundOn) {
-          this.makeGodSound(tweetData.sentiment);
+          setTimeout(this.makeGodSound(tweetData.sentiment), 2000);
         }
 
         this.addTweetMesh(tweetData);
@@ -2929,7 +2929,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         var meshTween = new TWEEN.Tween(scale).to({ value: Math.random() * 2 + tweetData.tweet.text.length / 40 }, 1000);
         meshTween.onUpdate(updateMeshScale);
         meshTween.easing(TWEEN.Easing.Circular.Out);
-        meshTween.start();
+        setTimeout(meshTween.start(), 2000);
 
         this.scene.add(mesh);
         this.tweetMeshes.push(mesh);
