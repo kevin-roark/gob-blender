@@ -33,7 +33,9 @@ export class ThreeBoiler {
     $(window).resize(() => {this.resize();});
     this.resize();
 
-    $('body').keypress((ev) => {this.keypress(ev.which);});
+    $('body').keypress((ev) => { this.keypress(ev.which); });
+    $('body').keydown((ev) => { this.keydown(ev.which); });
+    $('body').keyup((ev) => { this.keyup(ev.which); });
 
     this.setAppActive(true);
     $(window).blur(() => {
@@ -103,6 +105,10 @@ export class ThreeBoiler {
         break;
     }
   }
+
+  keydown(keycode) {}
+
+  keyup(keycode) {}
 
   spacebarPressed() {
     // lol

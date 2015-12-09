@@ -74,17 +74,13 @@ export class SheenScene {
     }
   }
 
-  move() {
+  move() {}
 
-  }
+  resize() {}
 
-  resize() {
-
-  }
-
-  keypress() {
-
-  }
+  keypress() {}
+  keydown() {}
+  keyup() {}
 
   /// Protected overrides
 

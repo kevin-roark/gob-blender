@@ -2582,7 +2582,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.maxMeshCount = options.maxMeshCount || 100;
     this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : { type: "sphere", number: 11 };
 
-    // mutable config variables
+    // mutable hud variables
     this.controlHudVisible = false;
     this.skymeshVisible = true;
     this.dataVisible = true;
@@ -2592,10 +2592,16 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.useInstruments = true;
     this.useSynth = true;
     this.soundOn = true;
+
+    // mutable key-controlled variables
     this.rotationRadius = 100;
     this.zoomIncrement = 1;
     this.cameraRotationIncrement = 0.002;
     this.rotateCamera = true;
+    this.zoomingIn = false;
+    this.zoomingOut = false;
+    this.rotatingLeft = false;
+    this.rotatingRight = false;
 
     // state
     this.cameraRotationAngle = 0;
@@ -2886,17 +2892,31 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
         if (this.rotateCamera) {
           this.cameraRotationAngle += this.cameraRotationIncrement; //0.002;
+
+          this.camera.position.x = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+          this.camera.position.y = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+          this.camera.position.z = this.rotationRadius * Math.cos(this.cameraRotationAngle);
         }
 
-        this.camera.position.x = this.rotationRadius * Math.sin(this.cameraRotationAngle);
-        this.camera.position.y = this.rotationRadius * Math.sin(this.cameraRotationAngle);
-        this.camera.position.z = this.rotationRadius * Math.cos(this.cameraRotationAngle);
         this.camera.lookAt(this.scene.position);
 
         if (this.detailedTweetMesh) {
           this.detailedTweetMesh.rotation.x += this.detailedTweetMeshRotation.x;
           this.detailedTweetMesh.rotation.y += this.detailedTweetMeshRotation.y;
           this.detailedTweetMesh.rotation.z += this.detailedTweetMeshRotation.z;
+        }
+
+        if (this.zoomingIn) {
+          this.zoomIn();
+        }
+        if (this.zoomingOut) {
+          this.zoomOut();
+        }
+        if (this.rotatingLeft) {
+          this.rotateLeft();
+        }
+        if (this.rotatingRight) {
+          this.rotateRight();
         }
       }
     },
@@ -2954,33 +2974,71 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         _get(Object.getPrototypeOf(MainScene.prototype), "keypress", this).call(this, keycode);
 
         switch (keycode) {
-          case 38: /* up */
-          case 119:
-            /* w */
-            this.zoomIn();
-            break;
-
-          case 40: /* down */
-          case 115:
-            /* s */
-            this.zoomOut();
-            break;
-
-          case 37: /* left */
-          case 97:
-            /* a */
-            this.rotateLeft();
-            break;
-
-          case 39: /* right */
-          case 100:
-            /* d */
-            this.rotateRight();
-            break;
-
           case 106:
             /* j */
             this.randomJump();
+            break;
+        }
+      }
+    },
+    keydown: {
+      value: function keydown(keycode) {
+        _get(Object.getPrototypeOf(MainScene.prototype), "keydown", this).call(this, keycode);
+
+        switch (keycode) {
+          case 38: /* up */
+          case 87:
+            /* w */
+            this.zoomingIn = true;
+            break;
+
+          case 40: /* down */
+          case 83:
+            /* s */
+            this.zoomingOut = true;
+            break;
+
+          case 37: /* left */
+          case 65:
+            /* a */
+            this.rotatingLeft = true;
+            break;
+
+          case 39: /* right */
+          case 68:
+            /* d */
+            this.rotatingRight = true;
+            break;
+        }
+      }
+    },
+    keyup: {
+      value: function keyup(keycode) {
+        _get(Object.getPrototypeOf(MainScene.prototype), "keyup", this).call(this, keycode);
+
+        switch (keycode) {
+          case 38: /* up */
+          case 87:
+            /* w */
+            this.zoomingIn = false;
+            break;
+
+          case 40: /* down */
+          case 83:
+            /* s */
+            this.zoomingOut = false;
+            break;
+
+          case 37: /* left */
+          case 65:
+            /* a */
+            this.rotatingLeft = false;
+            break;
+
+          case 39: /* right */
+          case 68:
+            /* d */
+            this.rotatingRight = false;
             break;
         }
       }
@@ -3629,9 +3687,6 @@ var Sheen = (function (_ThreeBoiler) {
         _get(Object.getPrototypeOf(Sheen.prototype), "render", this).call(this);
 
         TWEEN.update();
-        if (this.useControls) {
-          this.controls.update();
-        }
         this.mainScene.update(this.clock.getDelta());
       }
     },
@@ -3649,6 +3704,20 @@ var Sheen = (function (_ThreeBoiler) {
         _get(Object.getPrototypeOf(Sheen.prototype), "keypress", this).call(this, keycode);
 
         this.mainScene.keypress(keycode);
+      }
+    },
+    keydown: {
+      value: function keydown(keycode) {
+        _get(Object.getPrototypeOf(Sheen.prototype), "keydown", this).call(this, keycode);
+
+        this.mainScene.keydown(keycode);
+      }
+    },
+    keyup: {
+      value: function keyup(keycode) {
+        _get(Object.getPrototypeOf(Sheen.prototype), "keyup", this).call(this, keycode);
+
+        this.mainScene.keyup(keycode);
       }
     },
     spacebarPressed: {
@@ -3825,6 +3894,12 @@ var SheenScene = exports.SheenScene = (function () {
     keypress: {
       value: function keypress() {}
     },
+    keydown: {
+      value: function keydown() {}
+    },
+    keyup: {
+      value: function keyup() {}
+    },
     children: {
 
       /// Protected overrides
@@ -3968,6 +4043,12 @@ var ThreeBoiler = exports.ThreeBoiler = (function () {
     $("body").keypress(function (ev) {
       _this.keypress(ev.which);
     });
+    $("body").keydown(function (ev) {
+      _this.keydown(ev.which);
+    });
+    $("body").keyup(function (ev) {
+      _this.keyup(ev.which);
+    });
 
     this.setAppActive(true);
     $(window).blur(function () {
@@ -4051,6 +4132,12 @@ var ThreeBoiler = exports.ThreeBoiler = (function () {
             break;
         }
       }
+    },
+    keydown: {
+      value: function keydown(keycode) {}
+    },
+    keyup: {
+      value: function keyup(keycode) {}
     },
     spacebarPressed: {
       value: function spacebarPressed() {}
