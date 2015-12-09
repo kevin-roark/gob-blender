@@ -3190,6 +3190,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
         if (this.useMeshes) {
           this.addTweetMesh(tweetData);
+          this.tweetPaused = false;
         }
       }
     },
