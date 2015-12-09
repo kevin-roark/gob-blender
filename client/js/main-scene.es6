@@ -9,7 +9,7 @@ var nlp = require("nlp_compromise");
 
 import {SheenScene} from './sheen-scene.es6';
 
-var MAX_MESH_COUNT = 125;
+var MAX_MESH_COUNT = 100;
 var TWEETS_PER_SECOND = 3;
 var SCENE_RADIUS = 100;
 
@@ -34,6 +34,7 @@ export class MainScene extends SheenScene {
     this.useSynth = true;
     this.soundOn = true;
     this.pushDelay = 5000;
+    this.useMeshes = false;
 
     this.cameraRotationAngle = 0;
     this.raycaster = new THREE.Raycaster();
@@ -57,6 +58,29 @@ export class MainScene extends SheenScene {
     this.mostFrequentNounsElement = document.querySelector('#most-frequent-nouns-list');
     this.mostFrequentVerbsElement = document.querySelector('#most-frequent-verbs-list');
     this.mostFrequentAdjectivesElement = document.querySelector('#most-frequent-adjectives-list');
+
+    if (!this.useMeshes){
+      var tweetTicker = document.querySelectorAll(".tweet-ticker");
+
+      for (var i = 0; i < tweetTicker.length; i++) {
+          tweetTicker[i].style.left = "25%";
+          tweetTicker[i].style.top = "20%";
+      }
+
+      var tweetTickerText = document.querySelectorAll(".ticker-tweet-text");
+
+      for (var i = 0; i < tweetTickerText.length; i++) {
+          tweetTickerText[i].style.fontSize = "30px";
+      }
+
+      var statHud = document.querySelectorAll(".stat-hud");
+
+      for (var i = 0; i < statHud.length; i++) {
+          statHud[i].style.fontSize = "25px";
+          statHud[i].style.fontFamily = "Helvetica";
+      }
+    }
+
 
     this.sounds = {};
     this.synthVolume = -8;
@@ -302,27 +326,29 @@ export class MainScene extends SheenScene {
   }
 
   handleNewTweet(tweetData) {
-    this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
+    setTimeout(() => {
+      this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
 
-    this.totalSentiment += tweetData.sentiment;
-    this.totalSentimentElement.innerText = this.totalSentiment;
+      this.totalSentiment += tweetData.sentiment;
+      this.totalSentimentElement.innerText = this.totalSentiment;
 
-    if (tweetData.sentiment >= 0) {
-      this.goodTweetCount += 1;
-      this.goodTweetCountElement.innerText = this.goodTweetCount;
-    }
-    else {
-      this.badTweetCount += 1;
-      this.badTweetCountElement.innerText = this.badTweetCount;
-    }
+      if (tweetData.sentiment >= 0) {
+        this.goodTweetCount += 1;
+        this.goodTweetCountElement.innerText = this.goodTweetCount;
+      }
+      else {
+        this.badTweetCount += 1;
+        this.badTweetCountElement.innerText = this.badTweetCount;
+      }
 
-    this.processLanguage(tweetData.tweet);
+      this.processLanguage(tweetData.tweet);
 
-    if (this.soundOn){
-      setTimeout(() => { this.makeGodSound(tweetData.sentiment); }, this.pushDelay);
-    }
+      if (this.soundOn){
+        this.makeGodSound(tweetData.sentiment);
+      }
+    }, this.pushDelay);
 
-    this.addTweetMesh(tweetData);
+    if (this.useMeshes) {this.addTweetMesh(tweetData);}
   }
 
   processLanguage(tweet) {
