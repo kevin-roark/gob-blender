@@ -2839,9 +2839,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     randomJump: {
       value: function randomJump() {
-        if (!this.rotateCamera) {
-          this.cameraRotationAngle += Math.random() * 6;
-        }
+        this.cameraRotationAngle += Math.random() * 6;
       }
     },
     move: {
