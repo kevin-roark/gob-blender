@@ -23,7 +23,7 @@ export class MainScene extends SheenScene {
     this.onPhone = options.onPhone || false;
     this.pushDelay = options.pushDelay || 5000;
     this.maxMeshCount = options.maxMeshCount || 100;
-    this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 9};
+    this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 11};
 
     // mutable config variables
     this.controlHudVisible = false;
@@ -158,6 +158,7 @@ export class MainScene extends SheenScene {
                             }
                           });
     setupToggleClickHandler(document.querySelector('#mesh-images-toggle'), 'useMeshImages');
+    setupToggleClickHandler(document.querySelector('#mesh-toggle'), 'useMeshes');
 
     // sound options
     setupToggleClickHandler(document.querySelector('#sound-toggle'), 'soundOn', () => {
