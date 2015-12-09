@@ -19,13 +19,14 @@ export class MainScene extends SheenScene {
   constructor(renderer, camera, scene, options) {
     super(renderer, camera, scene, options);
 
+    // immutable config variables
     this.onPhone = options.onPhone || false;
+    this.pushDelay = options.pushDelay || 5000;
+    this.maxMeshCount = options.maxMeshCount || 100;
     this.useMeshes = options.useMeshes !== undefined ? options.useMeshes : true;
+    this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 9};
 
-    this.useSkybox = false;
-    this.useSkysphere = true;
-    this.skyboxNum = 1;
-    this.skysphereNum = 9;
+    // mutable config variables
     this.useMeshImages = false;
     this.useSentimentColor = true;
     this.useRandomColor = false;
@@ -33,14 +34,12 @@ export class MainScene extends SheenScene {
     this.useInstruments = true;
     this.useSynth = true;
     this.soundOn = true;
-    this.pushDelay = 5000;
     this.rotationRadius = 100;
-    this.maxMeshCount = 100;
-
     this.zoomIncrement = 1;
     this.cameraRotationIncrement = 0.002;
     this.rotateCamera = true;
 
+    // state
     this.cameraRotationAngle = 0;
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
@@ -69,6 +68,8 @@ export class MainScene extends SheenScene {
       addClass('.ticker-tweet-text', 'nomesh');
       addClass('.stat-hud', 'nomesh');
     }
+
+    this.setupSkyWithStyle(this.skyStyle);
 
     this.sounds = {};
     this.synthVolume = -8;
@@ -139,13 +140,20 @@ export class MainScene extends SheenScene {
 
     this.sounds.background1loud.setVolume(70);
     this.sounds.background1loud.setTime(0);
-    if (this.soundOn) { this.sounds.background1loud.play(); }
+
+    if (this.soundOn) {
+      this.sounds.background1loud.play();
+      this.makeHoldNotes();
+      this.makeHoldNotes2();
+    }
 
     this.socket = io('http://104.131.72.3:3201');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
+  }
 
-    if (this.useSkybox) {
-      var imagePrefix = "media/textures/skybox"+this.skyboxNum+"/";
+  setupSkyWithStyle(style) {
+    if (style.type === 'box') {
+      var imagePrefix = "media/textures/skybox" + style.number + "/";
       var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
       var imageSuffix = ".jpg";
       var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
@@ -160,17 +168,11 @@ export class MainScene extends SheenScene {
       var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
       this.scene.add(skyBox);
     }
-
-    if (this.useSkysphere) {
-      var skytexture = THREE.ImageUtils.loadTexture( 'media/textures/360sky/360sky'+this.skysphereNum+".jpg", THREE.UVMapping);
+    else {
+      var skytexture = THREE.ImageUtils.loadTexture( 'media/textures/360sky/360sky' + style.number + ".jpg", THREE.UVMapping);
       var skymesh = new THREE.Mesh( new THREE.SphereGeometry( 500, 60, 40 ), new THREE.MeshBasicMaterial( { map: skytexture } ) );
-			skymesh.scale.x = -1;
-			scene.add( skymesh );
-    }
-
-    if (this.soundOn) {
-      this.makeHoldNotes();
-      this.makeHoldNotes2();
+      skymesh.scale.x = -1;
+      this.scene.add(skymesh);
     }
   }
 
@@ -389,6 +391,8 @@ export class MainScene extends SheenScene {
     .easing(TWEEN.Easing.Cubic.Out)
     .start();
   }
+
+  /// Tweet Handling
 
   handleNewTweet(tweetData) {
     setTimeout(() => {
