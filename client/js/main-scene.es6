@@ -63,7 +63,7 @@ export class MainScene extends SheenScene {
     this.mostFrequentVerbsElement = document.querySelector('#most-frequent-verbs-list');
     this.mostFrequentAdjectivesElement = document.querySelector('#most-frequent-adjectives-list');
 
-    if (!this.useMeshes){
+    if (!this.useMeshes) {
       var tweetTicker = document.querySelectorAll(".tweet-ticker");
 
       for (var i = 0; i < tweetTicker.length; i++) {
@@ -84,7 +84,6 @@ export class MainScene extends SheenScene {
           statHud[i].style.fontFamily = "Helvetica";
       }
     }
-
 
     this.sounds = {};
     this.synthVolume = -8;

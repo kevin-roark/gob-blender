@@ -114,6 +114,13 @@ a {
     text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
   }
 
+  .tweet-ticker.nomesh {
+    left: 25%; bottom: 80%;
+  }
+    .ticker-tweet-text.nomesh {
+      font-size: 30px;
+    }
+
 .stat-hud {
   position: fixed; right: 5px; bottom: 5px; max-width: 50%;
   font-family: monospace; font-size: 18px;
@@ -129,4 +136,9 @@ a {
   }
   #bad-tweet-count {
     color: rgb(238, 46, 75);
+  }
+
+  .stat-hud.nomesh {
+    font-size: 25px;
+    font-family: 'Helvetica', sans-serif;
   }
