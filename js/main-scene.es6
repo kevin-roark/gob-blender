@@ -38,7 +38,7 @@ export class MainScene extends SheenScene {
 
     // mutable key-controlled variables
     this.rotationRadius = 100;
-    this.zoomIncrement = 1;
+    this.zoomIncrement = 0.5;
     this.cameraRotationIncrement = 0.002;
     this.rotateCamera = true;
     this.zoomingIn = false;
@@ -231,7 +231,13 @@ export class MainScene extends SheenScene {
 
   setupSound() {
     this.sounds = {};
-    this.synthVolume = -8;
+    this.synthVolume = -14;
+    this.percussionVolume = 15;
+    this.holdVolume = 40;
+    this.instrumentVolume = 40;
+    this.backgroundVolume = 65;
+
+
     this.panner = new Tone.Panner().toMaster();
     this.sineSynth = new Tone.SimpleSynth({
       "oscillator" : {
@@ -265,7 +271,7 @@ export class MainScene extends SheenScene {
       var sound = new buzz.sound('/media/sound/instruments/' + filename, {
         formats: ['mp3', 'ogg'],
         webAudioApi: true,
-        volume: 30
+        volume: this.instrumentVolume
       });
       this.sounds[filename] = sound;
     });
@@ -275,7 +281,7 @@ export class MainScene extends SheenScene {
       var sound = new buzz.sound('/media/sound/holds/' + filename, {
         formats: ['mp3', 'ogg'],
         webAudioApi: true,
-        volume: 60
+        volume: this.holdVolume
       });
       this.sounds[filename] = sound;
     });
@@ -292,12 +298,12 @@ export class MainScene extends SheenScene {
       var sound = new buzz.sound('/media/sound/percussion/' + filename, {
         formats: ['mp3'],
         webAudioApi: true,
-        volume: 30
+        volume: this.percussionVolume
       });
       this.sounds[filename] = sound;
     });
 
-    this.sounds.background1loud.setVolume(70);
+    this.sounds.background1loud.setVolume(this.backgroundVolume);
     this.sounds.background1loud.setTime(0);
     this.sounds.background1loud.loop().play();
 
