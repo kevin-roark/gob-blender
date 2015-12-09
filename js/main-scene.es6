@@ -25,7 +25,7 @@ export class MainScene extends SheenScene {
     this.maxMeshCount = options.maxMeshCount || 100;
     this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 11};
 
-    // mutable config variables
+    // mutable hud variables
     this.controlHudVisible = false;
     this.skymeshVisible = true;
     this.dataVisible = true;
@@ -35,10 +35,16 @@ export class MainScene extends SheenScene {
     this.useInstruments = true;
     this.useSynth = false;
     this.soundOn = true;
+
+    // mutable key-controlled variables
     this.rotationRadius = 100;
-    this.zoomIncrement = 1;
+    this.zoomIncrement = 0.5;
     this.cameraRotationIncrement = 0.002;
     this.rotateCamera = true;
+    this.zoomingIn = false;
+    this.zoomingOut = false;
+    this.rotatingLeft = false;
+    this.rotatingRight = false;
 
     // state
     this.cameraRotationAngle = 0;
@@ -225,7 +231,13 @@ export class MainScene extends SheenScene {
 
   setupSound() {
     this.sounds = {};
-    this.synthVolume = -8;
+    this.synthVolume = -14;
+    this.percussionVolume = 15;
+    this.holdVolume = 40;
+    this.instrumentVolume = 40;
+    this.backgroundVolume = 65;
+
+
     this.panner = new Tone.Panner().toMaster();
     this.sineSynth = new Tone.SimpleSynth({
       "oscillator" : {
@@ -259,7 +271,7 @@ export class MainScene extends SheenScene {
       var sound = new buzz.sound('/media/sound/instruments/' + filename, {
         formats: ['mp3', 'ogg'],
         webAudioApi: true,
-        volume: 30
+        volume: this.instrumentVolume
       });
       this.sounds[filename] = sound;
     });
@@ -269,7 +281,7 @@ export class MainScene extends SheenScene {
       var sound = new buzz.sound('/media/sound/holds/' + filename, {
         formats: ['mp3', 'ogg'],
         webAudioApi: true,
-        volume: 60
+        volume: this.holdVolume
       });
       this.sounds[filename] = sound;
     });
@@ -286,12 +298,12 @@ export class MainScene extends SheenScene {
       var sound = new buzz.sound('/media/sound/percussion/' + filename, {
         formats: ['mp3'],
         webAudioApi: true,
-        volume: 30
+        volume: this.percussionVolume
       });
       this.sounds[filename] = sound;
     });
 
-    this.sounds.background1loud.setVolume(70);
+    this.sounds.background1loud.setVolume(this.backgroundVolume);
     this.sounds.background1loud.setTime(0);
     this.sounds.background1loud.loop().play();
 
@@ -327,17 +339,31 @@ export class MainScene extends SheenScene {
 
     if (this.rotateCamera) {
       this.cameraRotationAngle += this.cameraRotationIncrement; //0.002;
+
+      this.camera.position.x = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+      this.camera.position.y = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+      this.camera.position.z = this.rotationRadius * Math.cos(this.cameraRotationAngle);
     }
 
-    this.camera.position.x = this.rotationRadius * Math.sin(this.cameraRotationAngle);
-    this.camera.position.y = this.rotationRadius * Math.sin(this.cameraRotationAngle);
-    this.camera.position.z = this.rotationRadius * Math.cos(this.cameraRotationAngle);
     this.camera.lookAt(this.scene.position);
 
     if (this.detailedTweetMesh) {
       this.detailedTweetMesh.rotation.x += this.detailedTweetMeshRotation.x;
       this.detailedTweetMesh.rotation.y += this.detailedTweetMeshRotation.y;
       this.detailedTweetMesh.rotation.z += this.detailedTweetMeshRotation.z;
+    }
+
+    if (this.zoomingIn) {
+      this.zoomIn();
+    }
+    if (this.zoomingOut) {
+      this.zoomOut();
+    }
+    if (this.rotatingLeft) {
+      this.rotateLeft();
+    }
+    if (this.rotatingRight) {
+      this.rotateRight();
     }
   }
 
@@ -389,28 +415,60 @@ export class MainScene extends SheenScene {
     super.keypress(keycode);
 
     switch (keycode) {
+      case 106: /* j */
+        this.randomJump();
+        break;
+    }
+  }
+
+  keydown(keycode) {
+    super.keydown(keycode);
+
+    switch (keycode) {
       case 38:  /* up */
-      case 119: /* w */
-        this.zoomIn();
+      case 87: /* w */
+        this.zoomingIn = true;
         break;
 
       case 40:  /* down */
-      case 115: /* s */
-        this.zoomOut();
+      case 83: /* s */
+        this.zoomingOut = true;
         break;
 
       case 37:  /* left */
-      case 97: /* a */
-        this.rotateLeft();
+      case 65: /* a */
+        this.rotatingLeft = true;
         break;
 
       case 39:  /* right */
-      case 100: /* d */
-        this.rotateRight();
+      case 68: /* d */
+        this.rotatingRight = true;
+        break;
+    }
+  }
+
+  keyup(keycode) {
+    super.keyup(keycode);
+
+    switch (keycode) {
+      case 38:  /* up */
+      case 87: /* w */
+        this.zoomingIn = false;
         break;
 
-      case 106: /* j */
-        this.randomJump();
+      case 40:  /* down */
+      case 83: /* s */
+        this.zoomingOut = false;
+        break;
+
+      case 37:  /* left */
+      case 65: /* a */
+        this.rotatingLeft = false;
+        break;
+
+      case 39:  /* right */
+      case 68: /* d */
+        this.rotatingRight = false;
         break;
     }
   }

@@ -107,9 +107,6 @@ class Sheen extends ThreeBoiler {
     super.render();
 
     TWEEN.update();
-    if (this.useControls) {
-      this.controls.update();
-    }
     this.mainScene.update(this.clock.getDelta());
   }
 
@@ -125,6 +122,18 @@ class Sheen extends ThreeBoiler {
     super.keypress(keycode);
 
     this.mainScene.keypress(keycode);
+  }
+
+  keydown(keycode) {
+    super.keydown(keycode);
+
+    this.mainScene.keydown(keycode);
+  }
+
+  keyup(keycode) {
+    super.keyup(keycode);
+
+    this.mainScene.keyup(keycode);
   }
 
   spacebarPressed() {
