@@ -2830,7 +2830,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
         this.sounds.background1loud.setVolume(70);
         this.sounds.background1loud.setTime(0);
-        this.sounds.background1loud.play();
+        this.sounds.background1loud.loop().play();
 
         this.makeHoldNotes(10000);
         this.makeHoldNotes(20000);
