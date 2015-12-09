@@ -610,6 +610,7 @@ export class MainScene extends SheenScene {
 
     if (this.useMeshes) {
       this.addTweetMesh(tweetData);
+      this.tweetPaused = false;
     }
   }
 
