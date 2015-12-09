@@ -27,6 +27,7 @@ export class MainScene extends SheenScene {
     this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 9};
 
     // mutable config variables
+    this.controlHudVisible = false;
     this.skymeshVisible = true;
     this.dataVisible = true;
     this.useMeshImages = true;
@@ -108,6 +109,16 @@ export class MainScene extends SheenScene {
         }
       }, false);
     };
+
+    // control hud toggling
+    setupToggleClickHandler(document.querySelector('#control-hud-toggle'), 'controlHudVisible', () => {
+      if (this.controlHudVisible) {
+        removeClass('#control-hud-options', 'hidden');
+      }
+      else {
+        addClass('#control-hud-options', 'hidden');
+      }
+    });
 
     // data options
     setupToggleClickHandler(document.querySelector('#skybox-toggle'), 'skymeshVisible', () => {

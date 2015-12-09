@@ -170,7 +170,7 @@ a {
     .control-hud-toggle {
       cursor: pointer;
       text-decoration: none;
-      color: rgba(0, 0, 0, 0.5);
+      color: rgba(0, 0, 0, 0.6);
     }
       .control-hud-toggle.active {
         text-decoration: underline;
