@@ -31,18 +31,9 @@ a {
     font-style: italic;
   }
 
-#mobile-error-overlay {
+.hidden {
   display: none;
-  position: fixed; top: 0; left: 0; bottom: 0; right: 0; z-index: 2000; overflow-y: auto;
-  background-color: white; color: rgba(0, 0, 0, 0.87);
-  font-size: 30px; font-family: 'Helvetica', sans-serif;
 }
-  #mobile-error-overlay p {
-    padding: 50px 50px 50px 50px;
-  }
-  #mobile-error-image {
-    display: block; margin: 20px 0px 20px 0px;
-  }
 
 .splash-overlay {
   position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 999;
@@ -51,7 +42,9 @@ a {
   font-family: 'Helvetica', sans-serif;
 }
   .splash-overlay .title {
-    font-size: 40px; letter-spacing: 1px; margin-bottom: 20px;
+    font-family: 'Times New Roman', serif;
+    font-size: 64px; letter-spacing: 1px;
+    margin-bottom: 10px;
   }
   .splash-overlay .description-text {
     font-size: 21px; max-width: 500px; line-height: 28px;
@@ -63,22 +56,40 @@ a {
     -moz-transition: all 250ms;
     transition: all 250ms;
   }
-  #splash-please-use-chrome {
+  .splash-warning {
     display: none;
     font-size: 21px; margin-bottom: 20px;
   }
   #splash-controls {
     display: none;
     font-size: 20px; line-height: 30px; margin-bottom: 20px;
+    max-width: 420px;
   }
   #splash-disclaimer {
-    margin-left: 0px; /* b man you can make this more left if u want */
+    margin-left: 0px;
     margin-top: 15px; margin-bottom: 20px;
   }
-  #click-to-start {
+  .click-to-start-container {
     display: none;
-    font-size: 32px;
   }
+    .click-to-start-button {
+      cursor: pointer;
+      -webkit-transition: all 250ms;
+      -moz-transition: all 250ms;
+      transition: all 250ms;
+    }
+      .click-to-start-button:hover,.click-to-start-button:focus {
+        font-style: italic;
+        -webkit-transform: scale(1.05);
+        transform: scale(1.05);
+      }
+    #click-to-start {
+      margin: 30px 0px 40px 0px;
+      font-size: 40px;
+    }
+    #click-to-start-simple {
+      font-size: 16px;
+    }
   .subsidiaries {
     position: absolute; bottom: 20px; right: 20px;
     text-align: right;
@@ -114,6 +125,16 @@ a {
     text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
   }
 
+  .tweet-ticker.nomesh {
+    left: 25%; bottom: 70%; max-width: 65%;
+  }
+    .ticker-tweet-text.nomesh {
+      font-size: 30px;
+    }
+    .ticker-tweet-text.light-background {
+      color: rgba(0, 0, 0, 0.87);
+    }
+
 .stat-hud {
   position: fixed; right: 5px; bottom: 5px; max-width: 50%;
   font-family: monospace; font-size: 18px;
@@ -130,3 +151,40 @@ a {
   #bad-tweet-count {
     color: rgb(238, 46, 75);
   }
+
+  .stat-hud.nomesh {
+    font-size: 25px;
+    max-width: 100%;
+  }
+  .stat-hud.light-background {
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+.control-hud {
+  position: fixed; top: 0; right: 0;
+  user-select: none;
+}
+  .control-hud-element {
+    display: inline-block;
+    margin: 5px;
+    font-family: monospace; font-size: 12px;
+    user-select: none;
+  }
+    .control-hud-section-divider {
+      height: 15px; width: 1px; margin: 5px 5px -5px 5px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    .control-hud-toggle {
+      cursor: pointer;
+      text-decoration: none;
+      color: rgba(0, 0, 0, 0.6);
+    }
+      .control-hud-toggle.active {
+        text-decoration: underline;
+        color: rgba(0, 0, 0, 0.95);
+      }
+    .control-hud-options {
+      cursor: pointer;
+      text-decoration: underline;
+      color: rgba(0, 0, 0, 0.95);
+    }

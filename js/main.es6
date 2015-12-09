@@ -10,7 +10,6 @@ import {MainScene} from './main-scene.es6';
 let FlyControls = require('./controls/fly-controls');
 
 var ON_PHONE = (/Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-var USE_CONTROLS = false;
 
 var BaseLoadingText = 'is loading';
 var $splashStatus = $('#splash-status');
@@ -22,8 +21,6 @@ class Sheen extends ThreeBoiler {
       alpha: true,
       onPhone: ON_PHONE
     });
-
-    this.useControls = USE_CONTROLS;
 
     var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
     if (!isChrome) {
@@ -37,16 +34,6 @@ class Sheen extends ThreeBoiler {
 
       this.renderer.gammaInput = true;
   	  this.renderer.gammaOutput = true;
-    }
-
-    if (this.useControls) {
-      this.controls = new FlyControls(this.camera, {
-        allowYMovement: false,
-        movementSpeed: 15.0,
-        restrictedXRange: {min: -195, max: 195},
-        restrictedZRange: {min: -195, max: 195}
-      });
-      this.scene.add(this.controls.getObject());
     }
 
     this.mainScene = new MainScene(this.renderer, this.camera, this.scene, {onPhone: ON_PHONE});
@@ -63,18 +50,21 @@ class Sheen extends ThreeBoiler {
         return;
       }
 
-      if (this.useControls) {
-        if (this.controls.requestPointerlock) {
-          this.controls.requestPointerlock();
-        }
-        this.controls.enabled = true;
+      if (this.hasStarted) {
+        this.mainScene.click(ev);
       }
+    });
 
+    $('#click-to-start').click(() => {
       if (!this.hasStarted) {
-        this.start();
+        this.start(false);
       }
+    });
 
-      this.mainScene.click(ev);
+    $('#click-to-start-simple').click(() => {
+      if (!this.hasStarted) {
+        this.start(true);
+      }
     });
 
     $(document).mousemove((ev) => {
@@ -123,19 +113,18 @@ class Sheen extends ThreeBoiler {
     this.mainScene.update(this.clock.getDelta());
   }
 
+  setAppActive(active) {
+    super.setAppActive(active);
+
+    if (this.mainScene) {
+      this.mainScene.setAppActive(active);
+    }
+  }
+
   keypress(keycode) {
     super.keypress(keycode);
 
-    switch (keycode) {
-      case 113: /* q */
-        break;
-
-      case 114: /* r */
-        break;
-
-      case 112: /* p */
-        break;
-    }
+    this.mainScene.keypress(keycode);
   }
 
   spacebarPressed() {
@@ -168,29 +157,28 @@ class Sheen extends ThreeBoiler {
     $splashStatus.css('font-style', 'italic');
 
     if (this.onPhone) {
-      $('#mobile-error-overlay').fadeIn(1000);
+      $('#splash-mobile-warning').fadeIn(1000);
     }
-    else {
-      setTimeout(() => {
-        if (!this.hasStarted) {
-          $('#splash-controls').fadeIn(1000);
-        }
-      }, 250);
-      setTimeout(() => {
-        if (!this.hasStarted) {
-          $('#click-to-start').fadeIn(1000);
-        }
-      }, 1750);
-    }
+
+    setTimeout(() => {
+      if (!this.hasStarted) {
+        $('#splash-controls').fadeIn(1000);
+      }
+    }, 250);
+    setTimeout(() => {
+      if (!this.hasStarted) {
+        $('.click-to-start-container').fadeIn(1000);
+      }
+    }, 1750);
   }
 
-  start() {
+  start(simpleMode) {
     $('.splash-overlay').fadeOut(1000);
     if (this.onPhone) {
       $('#mobile-error-overlay').fadeOut(1000);
     }
 
-    this.mainScene.doTimedWork();
+    this.mainScene.doTimedWork(simpleMode);
 
     this.hasStarted = true;
   }

@@ -8,33 +8,39 @@ var Tone = require('tone');
 var nlp = require("nlp_compromise");
 
 import {SheenScene} from './sheen-scene.es6';
+import {WordTracker} from './word-tracker.es6';
 
-var MAX_MESH_COUNT = 125;
 var TWEETS_PER_SECOND = 3;
-var SCENE_RADIUS = 100;
 
 export class MainScene extends SheenScene {
 
   /// Init
 
-
   constructor(renderer, camera, scene, options) {
     super(renderer, camera, scene, options);
 
+    // immutable config variables
     this.onPhone = options.onPhone || false;
-    this.useSkybox = false;
-    this.useSkysphere = true;
-    this.skyboxNum = 1;
-    this.skysphereNum = 9;
+    this.pushDelay = options.pushDelay || 5000;
+    this.maxMeshCount = options.maxMeshCount || 100;
+    this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 9};
+
+    // mutable config variables
+    this.controlHudVisible = false;
+    this.skymeshVisible = true;
+    this.dataVisible = true;
     this.useMeshImages = true;
-    this.useSentimentColor = true;
-    this.useRandomColor = false;
+    this.meshColorStyle = 'sentiment';
     this.usePercussion = true;
     this.useInstruments = true;
     this.useSynth = false;
     this.soundOn = true;
-    this.pushDelay = 5000;
+    this.rotationRadius = 100;
+    this.zoomIncrement = 1;
+    this.cameraRotationIncrement = 0.002;
+    this.rotateCamera = true;
 
+    // state
     this.cameraRotationAngle = 0;
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
@@ -58,6 +64,146 @@ export class MainScene extends SheenScene {
     this.mostFrequentVerbsElement = document.querySelector('#most-frequent-verbs-list');
     this.mostFrequentAdjectivesElement = document.querySelector('#most-frequent-adjectives-list');
 
+    this.setupControlHud();
+
+    this.setupSkyWithStyle(this.skyStyle);
+
+    this.setupSound();
+  }
+
+  doTimedWork(inSimpleMode) {
+    super.doTimedWork();
+
+    this.useMeshes = !inSimpleMode;
+
+    if (!this.useMeshes) {
+      addClass('.tweet-ticker', 'nomesh');
+      addClass('.ticker-tweet-text', 'nomesh');
+      addClass('.stat-hud', 'nomesh');
+      addClass('#control-hud-mesh-section', 'hidden');
+    }
+
+    this.socket = io('http://104.131.72.3:3201');
+    this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
+  }
+
+  setupControlHud() {
+    var setupToggleClickHandler = (el, propertyName, callback) => {
+      el.addEventListener('click', () => {
+        el.classList.toggle('active');
+        this[propertyName] = !this[propertyName];
+        if (callback) {
+          callback();
+        }
+      }, false);
+    };
+
+    var setupOptionsClickHandler = (el, propertyName, propertyOptions, displayOptions, callback) => {
+      el.addEventListener('click', () => {
+        var currentDisplayOption = el.innerText;
+        var currentOptionIndex = displayOptions.indexOf(currentDisplayOption);
+        if (currentOptionIndex === -1) currentOptionIndex = 0;
+        var nextOptionIndex = currentOptionIndex < propertyOptions.length - 1 ? currentOptionIndex + 1 : 0;
+
+        el.innerText = displayOptions[nextOptionIndex];
+        this[propertyName] = propertyOptions[nextOptionIndex];
+
+        if (callback) {
+          callback();
+        }
+      }, false);
+    };
+
+    // control hud toggling
+    setupToggleClickHandler(document.querySelector('#control-hud-toggle'), 'controlHudVisible', () => {
+      if (this.controlHudVisible) {
+        removeClass('#control-hud-options', 'hidden');
+      }
+      else {
+        addClass('#control-hud-options', 'hidden');
+      }
+    });
+
+    // data options
+    setupToggleClickHandler(document.querySelector('#skybox-toggle'), 'skymeshVisible', () => {
+      this.skymesh.visible = this.skymeshVisible;
+
+      if (this.skymeshVisible) {
+        removeClass('.ticker-tweet-text', 'light-background');
+        removeClass('.stat-hud', 'light-background');
+      }
+      else {
+        addClass('.ticker-tweet-text', 'light-background');
+        addClass('.stat-hud', 'light-background');
+      }
+    });
+    setupToggleClickHandler(document.querySelector('#data-toggle'), 'dataVisible', () => {
+      if (this.dataVisible) {
+        removeClass('.stat-hud', 'hidden');
+      }
+      else {
+        addClass('.stat-hud', 'hidden');
+      }
+    });
+
+    // mesh options
+    setupOptionsClickHandler(document.querySelector('#mesh-color-options'),
+                            'meshColorStyle',
+                            ['sentiment', 'random', 'none'],
+                            ['sentiment colors', 'random colors', 'no colors'],
+                          () => {
+                            for (var i = 0; i < this.tweetMeshes.length; i++) {
+                              var mesh = this.tweetMeshes[i];
+                              mesh.material.color = this.colorForTweetData(mesh.__tweetData);
+                            }
+                          });
+    setupToggleClickHandler(document.querySelector('#mesh-images-toggle'), 'useMeshImages');
+
+    // sound options
+    setupToggleClickHandler(document.querySelector('#sound-toggle'), 'soundOn', () => {
+      for (var key in this.sounds) {
+        if (this.sounds.hasOwnProperty(key)) {
+          var sound = this.sounds[key];
+          if (this.soundOn) {
+            sound.unmute();
+          }
+          else {
+            sound.mute();
+          }
+        }
+      }
+    });
+    setupToggleClickHandler(document.querySelector('#instruments-toggle'), 'useInstruments');
+    setupToggleClickHandler(document.querySelector('#percussion-toggle'), 'usePercussion');
+    setupToggleClickHandler(document.querySelector('#synth-toggle'), 'useSynth');
+  }
+
+  setupSkyWithStyle(style) {
+    if (style.type === 'box') {
+      var imagePrefix = "media/textures/skybox" + style.number + "/";
+      var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
+      var imageSuffix = ".jpg";
+      var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
+
+      var materialArray = [];
+      for (var i = 0; i < 6; i++)
+        materialArray.push( new THREE.MeshBasicMaterial({
+          map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
+          side: THREE.BackSide
+        }));
+      var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
+      this.skymesh = new THREE.Mesh( skyGeometry, skyMaterial );
+      this.scene.add(this.skymesh);
+    }
+    else {
+      var skytexture = THREE.ImageUtils.loadTexture( 'media/textures/360sky/360sky' + style.number + ".jpg", THREE.UVMapping);
+      this.skymesh = new THREE.Mesh( new THREE.SphereGeometry( 500, 60, 40 ), new THREE.MeshBasicMaterial( { map: skytexture } ) );
+      this.skymesh.scale.x = -1;
+      this.scene.add(this.skymesh);
+    }
+  }
+
+  setupSound() {
     this.sounds = {};
     this.synthVolume = -8;
     this.panner = new Tone.Panner().toMaster();
@@ -88,7 +234,7 @@ export class MainScene extends SheenScene {
     this.panner.pan.value = 0.5;
     this.sineSynth.volume.value = this.triSynth.volume.value = this.synthVolume;
 
-    var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
+    var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
     soundFilenames.forEach((filename) => {
       var sound = new buzz.sound('/media/sound/instruments/' + filename, {
         formats: ['mp3', 'ogg'],
@@ -127,38 +273,10 @@ export class MainScene extends SheenScene {
 
     this.sounds.background1loud.setVolume(70);
     this.sounds.background1loud.setTime(0);
-    if (this.soundOn) { this.sounds.background1loud.play(); }
+    this.sounds.background1loud.play();
 
-    this.socket = io('http://104.131.72.3:3201');
-    this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
-
-    if (this.useSkybox) {
-      var imagePrefix = "media/textures/skybox"+this.skyboxNum+"/";
-      var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
-      var imageSuffix = ".jpg";
-      var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
-
-      var materialArray = [];
-      for (var i = 0; i < 6; i++)
-        materialArray.push( new THREE.MeshBasicMaterial({
-          map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
-          side: THREE.BackSide
-        }));
-      var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
-      var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
-      this.scene.add(skyBox);
-    }
-
-    if (this.useSkysphere) {
-      var skytexture = THREE.ImageUtils.loadTexture( 'media/textures/360sky/360sky'+this.skysphereNum+".jpg", THREE.UVMapping);
-      var skymesh = new THREE.Mesh( new THREE.SphereGeometry( 500, 60, 40 ), new THREE.MeshBasicMaterial( { map: skytexture } ) );
-			skymesh.scale.x = -1;
-			scene.add( skymesh );
-    }
-
-    if (this.soundOn) {this.makeHoldNotes();}
-    if (this.soundOn) {this.makeHoldNotes2();}
-
+    this.makeHoldNotes(10000);
+    this.makeHoldNotes(20000);
   }
 
   /// Overrides
@@ -168,24 +286,32 @@ export class MainScene extends SheenScene {
 
     this.renderer.setClearColor(0xf0f0f0);
 
-    if (!this.domMode) {
-      // the heaven and the lights
-      this.makeLights();
-    }
-  }
+    var light = new THREE.SpotLight(0xffffff, 1.5);
+    light.position.set(0, 500, 2000);
+    light.castShadow = true;
 
-  doTimedWork() {
-    super.doTimedWork();
+    light.shadowCameraNear = 200;
+    light.shadowCameraFar = this.camera.far;
+    light.shadowCameraFov = 50;
+
+    light.shadowBias = -0.00022;
+
+    light.shadowMapWidth = 2048;
+    light.shadowMapHeight = 2048;
+
+    this.scene.add(light);
   }
 
   update(dt) {
     super.update(dt);
 
-    this.cameraRotationAngle += 0.002;
+    if (this.rotateCamera) {
+      this.cameraRotationAngle += this.cameraRotationIncrement; //0.002;
+    }
 
-    this.camera.position.x = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
-    this.camera.position.y = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
-    this.camera.position.z = SCENE_RADIUS * Math.cos(this.cameraRotationAngle);
+    this.camera.position.x = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+    this.camera.position.y = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+    this.camera.position.z = this.rotationRadius * Math.cos(this.cameraRotationAngle);
     this.camera.lookAt(this.scene.position);
 
     if (this.detailedTweetMesh) {
@@ -195,10 +321,78 @@ export class MainScene extends SheenScene {
     }
   }
 
-  // Interaction
+  /// Interaction
 
-  spacebarPressed() {
+  zoomIn() {
+    if (this.rotationRadius > 1){
+      this.rotationRadius -= this.zoomIncrement;
+    }
+  }
 
+  zoomOut() {
+    if (this.rotationRadius < 250){
+      this.rotationRadius += this.zoomIncrement;
+    }
+  }
+
+  rotateLeft() {
+    if (this.rotateCamera) {
+      if (this.cameraRotationIncrement > 0.0002){
+        this.cameraRotationIncrement -= 0.0001;
+      }
+    }
+    else {
+      this.cameraRotationAngle -= this.cameraRotationIncrement * 6;
+    }
+  }
+
+  rotateRight() {
+    if (this.rotateCamera) {
+      if (this.cameraRotationIncrement < 0.01) {
+        this.cameraRotationIncrement += 0.0001;
+      }
+    }
+    else {
+      this.cameraRotationAngle += this.cameraRotationIncrement * 6;
+    }
+  }
+
+  randomJump() {
+    this.cameraRotationAngle += Math.random() * 6;
+  }
+
+  spacebarPressed(){
+    this.rotateCamera = !this.rotateCamera;
+  }
+
+  keypress(keycode) {
+    super.keypress(keycode);
+
+    switch (keycode) {
+      case 38:  /* up */
+      case 119: /* w */
+        this.zoomIn();
+        break;
+
+      case 40:  /* down */
+      case 115: /* s */
+        this.zoomOut();
+        break;
+
+      case 37:  /* left */
+      case 97: /* a */
+        this.rotateLeft();
+        break;
+
+      case 39:  /* right */
+      case 100: /* d */
+        this.rotateRight();
+        break;
+
+      case 106: /* j */
+        this.randomJump();
+        break;
+    }
   }
 
   move(ev) {
@@ -301,28 +495,34 @@ export class MainScene extends SheenScene {
     .start();
   }
 
+  /// Tweet Handling
+
   handleNewTweet(tweetData) {
-    this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
+    setTimeout(() => {
+      this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
 
-    this.totalSentiment += tweetData.sentiment;
-    this.totalSentimentElement.innerText = this.totalSentiment;
+      this.totalSentiment += tweetData.sentiment;
+      this.totalSentimentElement.innerText = this.totalSentiment;
 
-    if (tweetData.sentiment >= 0) {
-      this.goodTweetCount += 1;
-      this.goodTweetCountElement.innerText = this.goodTweetCount;
+      if (tweetData.sentiment >= 0) {
+        this.goodTweetCount += 1;
+        this.goodTweetCountElement.innerText = this.goodTweetCount;
+      }
+      else {
+        this.badTweetCount += 1;
+        this.badTweetCountElement.innerText = this.badTweetCount;
+      }
+
+      this.processLanguage(tweetData.tweet);
+
+      if (this.soundOn){
+        this.makeGodSound(tweetData.sentiment);
+      }
+    }, this.pushDelay);
+
+    if (this.useMeshes && this.appIsActive) {
+      this.addTweetMesh(tweetData);
     }
-    else {
-      this.badTweetCount += 1;
-      this.badTweetCountElement.innerText = this.badTweetCount;
-    }
-
-    this.processLanguage(tweetData.tweet);
-
-    if (this.soundOn){
-      setTimeout(() => { this.makeGodSound(tweetData.sentiment); }, this.pushDelay);
-    }
-
-    this.addTweetMesh(tweetData);
   }
 
   processLanguage(tweet) {
@@ -363,12 +563,11 @@ export class MainScene extends SheenScene {
     var mesh = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
       new THREE.MeshLambertMaterial({
-        color: this.colorForSentiment(tweetData.sentiment)
-        //map: this.religionTextureForSentiment(tweetData.sentiment)
+        color: this.colorForTweetData(tweetData)
       })
     );
 
-    if(this.useMeshImages){
+    if (this.useMeshImages) {
       mesh.material.map = this.religionTextureForSentiment(tweetData.sentiment);
     }
 
@@ -380,7 +579,7 @@ export class MainScene extends SheenScene {
     var scale = {value: 0.05};
     var updateMeshScale = () => { mesh.scale.set(scale.value, scale.value, scale.value); };
     updateMeshScale();
-    var meshTween = new TWEEN.Tween(scale).to({value: Math.random() * 2 + (tweetData.tweet.text.length / 40)}, 1000);
+    var meshTween = new TWEEN.Tween(scale).to({value: Math.random() * 2 + (tweetData.tweet.text.length / 40)}, 500);
     meshTween.onUpdate(updateMeshScale);
     meshTween.easing(TWEEN.Easing.Circular.Out);
     setTimeout(() => { meshTween.start(); }, this.pushDelay);
@@ -388,7 +587,7 @@ export class MainScene extends SheenScene {
     this.scene.add(mesh);
     this.tweetMeshes.push(mesh);
 
-    var lifetime = (MAX_MESH_COUNT / TWEETS_PER_SECOND) * 1000 - 5000;
+    var lifetime = (this.maxMeshCount / TWEETS_PER_SECOND) * 1000 - 500;
     setTimeout(() => {
       removeFromArray(this.tweetMeshes, mesh);
 
@@ -396,7 +595,7 @@ export class MainScene extends SheenScene {
         this.bringDetailTweetBackHome();
       }
 
-      var deathTween = new TWEEN.Tween(scale).to({value: 0.01}, 5000);
+      var deathTween = new TWEEN.Tween(scale).to({value: 0.01}, 500);
       deathTween.onUpdate(updateMeshScale);
       deathTween.easing(TWEEN.Easing.Circular.Out);
       deathTween.onComplete(() => { this.scene.remove(mesh); });
@@ -427,28 +626,6 @@ export class MainScene extends SheenScene {
   }
 
   fuzzySentiment(score) {
-    /* if (score > 15) {
-      return 'amazing';
-    }
-    else if (score > 9) {
-      return 'great';
-    }
-    else if (score > 3) {
-      return 'good';
-    }
-    else if (score > -2) {
-      return 'ok';
-    }
-    else if (score > -5) {
-      return 'bad';
-    }
-    else if (score > -10) {
-      return 'worse';
-    }
-    else {
-      return 'horrible';
-    }*/
-
     if (score > 10) {
       return 'amazing';
     }
@@ -463,53 +640,48 @@ export class MainScene extends SheenScene {
     }
   }
 
-  colorForSentiment(score) {
+  colorForTweetData(tweetData) {
+    var score = tweetData.sentiment;
     var color = new THREE.Color(0xffffff);
 
-    var maxMagnitude = 10;
-    var clampedScore = score < 0 ? Math.min(-score, maxMagnitude) : Math.min(score, maxMagnitude);
-    var percent = clampedScore / maxMagnitude;
+    switch (this.meshColorStyle) {
+      case 'sentiment': {
+        var maxMagnitude = 10;
+        var clampedScore = score < 0 ? Math.min(-score, maxMagnitude) : Math.min(score, maxMagnitude);
+        var percent = clampedScore / maxMagnitude;
+        if (score < 0) {
+          color.setRGB(1, 1 - percent, 1 - percent);
+        }
+        else {
+          color.setRGB(1 - percent, 1, 1 - percent);
+        }
 
-    if (this.useSentimentColor){
-      if (score < 0) {
-        color.setRGB(1, 1 - percent, 1 - percent);
+        return color;
       }
-      else {
-        color.setRGB(1 - percent, 1, 1 - percent);
+
+      case 'random': {
+        color.setRGB(Math.random(), Math.random(), Math.random());
+        return color;
+      }
+
+      default: {
+        return color;
       }
     }
-    else if (this.useRandomColor) {
-      color.setRGB(Math.random(),Math.random(),Math.random());
-    }
-    return color;
   }
 
-  makeHoldNotes (){
+  makeHoldNotes(maxHoldDelay) {
     var sounds = this.sounds;
-    var holdSoundArray = [];
-    holdSoundArray = [sounds.A,sounds.C,sounds.C2,sounds.D,sounds.E,sounds.F,sounds.G];
+    var holdSoundArray = [sounds.A,sounds.C,sounds.C2,sounds.D,sounds.E,sounds.F,sounds.G];
     var holdSound = kt.choice(holdSoundArray);
     if (holdSound.isPaused() || holdSound.getTime() > 0.2) {
       holdSound.setTime(0);
       holdSound.play();
     }
-    var holdDelay = 3000 + Math.random()*Math.random()*10000;
-    console.log(holdDelay);
-    setTimeout(() => { this.makeHoldNotes(); }, holdDelay);
-  }
-
-  makeHoldNotes2 (){
-    var sounds = this.sounds;
-    var holdSoundArray = [];
-    holdSoundArray = [sounds.A,sounds.C,sounds.C2,sounds.D,sounds.E,sounds.F,sounds.G];
-    var holdSound = kt.choice(holdSoundArray);
-    if (holdSound.isPaused() || holdSound.getTime() > 0.2) {
-      holdSound.setTime(0);
-      holdSound.play();
-    }
-    var holdDelay = 3000 + Math.random()*Math.random()*20000;
-    console.log(holdDelay);
-    setTimeout(() => { this.makeHoldNotes2(); }, holdDelay);
+    var holdDelay = 3000 + Math.random() * Math.random() * maxHoldDelay;
+    setTimeout(() => {
+      this.makeHoldNotes(maxHoldDelay);
+    }, holdDelay);
   }
 
   makeGodSound(score) {
@@ -659,8 +831,7 @@ export class MainScene extends SheenScene {
       //noteArray = ["C0"];
     }
 
-    if (score > 15)
-    {
+    if (score > 15) {
       noteArray = ["C8","D8","E8","F8","G8","A8","C9","D9","E9","F9","G9","A9"];
     }
     else if (score > 10) {
@@ -682,7 +853,7 @@ export class MainScene extends SheenScene {
       noteArray = ["C1","D1","E1","F1","G1","A1"];
     }
 
-    if(this.useInstruments){
+    if (this.useInstruments) {
       sound = kt.choice(soundArray);
       if (sound.isPaused() || sound.getTime() > 0.2) {
         sound.setTime(0);
@@ -698,36 +869,16 @@ export class MainScene extends SheenScene {
       }
     }
 
-
     var maxMagnitude = 30;
     var clampedScore = score < 0 ? score : Math.min(score, maxMagnitude);
     var percent = (clampedScore / maxMagnitude)/2;
 
-    if(this.useSynth){
+    if (this.useSynth) {
       var note = kt.choice(noteArray);
       this.panner.pan.value = 0.5 + percent;
       this.sineSynth.triggerAttackRelease(note, "32n");
       //this.triSynth.triggerAttackRelease(note, "16n");
     }
-  }
-
-  // Creation
-
-  makeLights() {
-    var light = new THREE.SpotLight(0xffffff, 1.5);
-    light.position.set(0, 500, 2000);
-    light.castShadow = true;
-
-    light.shadowCameraNear = 200;
-    light.shadowCameraFar = this.camera.far;
-    light.shadowCameraFov = 50;
-
-    light.shadowBias = -0.00022;
-
-    light.shadowMapWidth = 2048;
-    light.shadowMapHeight = 2048;
-
-    this.scene.add(light);
   }
 }
 
@@ -745,54 +896,16 @@ function urlify(text) {
     });
 }
 
-class WordTracker {
-  constructor(options) {
-    if (!options) options = {};
-    this.numberOfMostFrequentWords = options.numberOfMostFrequentWords || 3;
-    this.bannedWords = options.bannedWords || [];
-
-    this.countmap = {};
-    this.mostFrequentWords = [];
+function addClass(selector, name) {
+  var els = document.querySelectorAll(selector);
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.add(name);
   }
+}
 
-  track(words) {
-    for (var i = 0; i < words.length; i++) {
-      var word = words[i].replace(/\s/g, '');
-      if (word.length === 0 || this.bannedWords.indexOf(word.toLowerCase()) >= 0) {
-        continue;
-      }
-
-      var count = this.countmap[word] || 0;
-      count += 1;
-      this.countmap[word] = count;
-
-      for (var j = 0; j < this.numberOfMostFrequentWords; j++) {
-        var frequentWord = this.mostFrequentWords[j];
-        var frequentWordCount = this.countmap[frequentWord] || 0;
-        if (count > frequentWordCount) {
-          // this becomes a frequent word
-          var currentIndex = this.mostFrequentWords.indexOf(word);
-          if (currentIndex >= 0) {
-            // already in list, swap
-            this.mostFrequentWords[currentIndex] = frequentWord;
-            this.mostFrequentWords[j] = word;
-          }
-          else {
-            // insert into list
-            this.mostFrequentWords.splice(j, 0, word);
-            if (this.mostFrequentWords.length > this.numberOfMostFrequentWords) {
-              this.mostFrequentWords.pop();
-            }
-          }
-
-          break; // get out
-        }
-      }
-    }
+function removeClass(selector, name) {
+  var els = document.querySelectorAll(selector);
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.remove(name);
   }
-
-  mostFrequentWordsList() {
-    return this.mostFrequentWords.join(', ');
-  }
-
 }
