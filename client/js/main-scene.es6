@@ -28,8 +28,7 @@ export class MainScene extends SheenScene {
 
     // mutable config variables
     this.useMeshImages = false;
-    this.useSentimentColor = true;
-    this.useRandomColor = false;
+    this.meshColorStyle = 'sentiment';
     this.usePercussion = true;
     this.useInstruments = true;
     this.useSynth = true;
@@ -538,22 +537,30 @@ export class MainScene extends SheenScene {
   colorForSentiment(score) {
     var color = new THREE.Color(0xffffff);
 
-    var maxMagnitude = 10;
-    var clampedScore = score < 0 ? Math.min(-score, maxMagnitude) : Math.min(score, maxMagnitude);
-    var percent = clampedScore / maxMagnitude;
+    switch (this.meshColorStyle) {
+      case 'sentiment': {
+        var maxMagnitude = 10;
+        var clampedScore = score < 0 ? Math.min(-score, maxMagnitude) : Math.min(score, maxMagnitude);
+        var percent = clampedScore / maxMagnitude;
+        if (score < 0) {
+          color.setRGB(1, 1 - percent, 1 - percent);
+        }
+        else {
+          color.setRGB(1 - percent, 1, 1 - percent);
+        }
 
-    if (this.useSentimentColor){
-      if (score < 0) {
-        color.setRGB(1, 1 - percent, 1 - percent);
+        return color;
       }
-      else {
-        color.setRGB(1 - percent, 1, 1 - percent);
+
+      case 'random': {
+        color.setRGB(Math.random(), Math.random(), Math.random());
+        return color;
+      }
+
+      default: {
+        return color;
       }
     }
-    else if (this.useRandomColor) {
-      color.setRGB(Math.random(),Math.random(),Math.random());
-    }
-    return color;
   }
 
   makeHoldNotes() {

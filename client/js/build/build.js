@@ -2587,8 +2587,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
     // mutable config variables
     this.useMeshImages = false;
-    this.useSentimentColor = true;
-    this.useRandomColor = false;
+    this.meshColorStyle = "sentiment";
     this.usePercussion = true;
     this.useInstruments = true;
     this.useSynth = true;
@@ -3126,20 +3125,32 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
       value: function colorForSentiment(score) {
         var color = new THREE.Color(16777215);
 
-        var maxMagnitude = 10;
-        var clampedScore = score < 0 ? Math.min(-score, maxMagnitude) : Math.min(score, maxMagnitude);
-        var percent = clampedScore / maxMagnitude;
+        switch (this.meshColorStyle) {
+          case "sentiment":
+            {
+              var maxMagnitude = 10;
+              var clampedScore = score < 0 ? Math.min(-score, maxMagnitude) : Math.min(score, maxMagnitude);
+              var percent = clampedScore / maxMagnitude;
+              if (score < 0) {
+                color.setRGB(1, 1 - percent, 1 - percent);
+              } else {
+                color.setRGB(1 - percent, 1, 1 - percent);
+              }
 
-        if (this.useSentimentColor) {
-          if (score < 0) {
-            color.setRGB(1, 1 - percent, 1 - percent);
-          } else {
-            color.setRGB(1 - percent, 1, 1 - percent);
-          }
-        } else if (this.useRandomColor) {
-          color.setRGB(Math.random(), Math.random(), Math.random());
+              return color;
+            }
+
+          case "random":
+            {
+              color.setRGB(Math.random(), Math.random(), Math.random());
+              return color;
+            }
+
+          default:
+            {
+              return color;
+            }
         }
-        return color;
       }
     },
     makeHoldNotes: {
