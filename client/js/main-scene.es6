@@ -23,7 +23,6 @@ export class MainScene extends SheenScene {
     this.onPhone = options.onPhone || false;
     this.pushDelay = options.pushDelay || 5000;
     this.maxMeshCount = options.maxMeshCount || 100;
-    this.useMeshes = options.useMeshes !== undefined ? options.useMeshes : true;
     this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 9};
 
     // mutable config variables
@@ -65,19 +64,24 @@ export class MainScene extends SheenScene {
     this.mostFrequentVerbsElement = document.querySelector('#most-frequent-verbs-list');
     this.mostFrequentAdjectivesElement = document.querySelector('#most-frequent-adjectives-list');
 
-    if (!this.useMeshes) {
-      addClass('.tweet-ticker', 'nomesh');
-      addClass('.ticker-tweet-text', 'nomesh');
-      addClass('.stat-hud', 'nomesh');
-      addClass('#control-hud-sky-data-section', 'hidden');
-      addClass('#control-hud-mesh-section', 'hidden');
-    }
-
     this.setupControlHud();
 
     this.setupSkyWithStyle(this.skyStyle);
 
     this.setupSound();
+  }
+
+  doTimedWork(inSimpleMode) {
+    super.doTimedWork();
+
+    this.useMeshes = !inSimpleMode;
+
+    if (!this.useMeshes) {
+      addClass('.tweet-ticker', 'nomesh');
+      addClass('.ticker-tweet-text', 'nomesh');
+      addClass('.stat-hud', 'nomesh');
+      addClass('#control-hud-mesh-section', 'hidden');
+    }
 
     this.socket = io('http://104.131.72.3:3201');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
@@ -135,11 +139,9 @@ export class MainScene extends SheenScene {
     });
     setupToggleClickHandler(document.querySelector('#data-toggle'), 'dataVisible', () => {
       if (this.dataVisible) {
-        removeClass('.ticker-tweet-text', 'hidden');
         removeClass('.stat-hud', 'hidden');
       }
       else {
-        addClass('.ticker-tweet-text', 'hidden');
         addClass('.stat-hud', 'hidden');
       }
     });

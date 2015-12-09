@@ -2580,7 +2580,6 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.onPhone = options.onPhone || false;
     this.pushDelay = options.pushDelay || 5000;
     this.maxMeshCount = options.maxMeshCount || 100;
-    this.useMeshes = options.useMeshes !== undefined ? options.useMeshes : true;
     this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : { type: "sphere", number: 9 };
 
     // mutable config variables
@@ -2622,27 +2621,33 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.mostFrequentVerbsElement = document.querySelector("#most-frequent-verbs-list");
     this.mostFrequentAdjectivesElement = document.querySelector("#most-frequent-adjectives-list");
 
-    if (!this.useMeshes) {
-      addClass(".tweet-ticker", "nomesh");
-      addClass(".ticker-tweet-text", "nomesh");
-      addClass(".stat-hud", "nomesh");
-      addClass("#control-hud-sky-data-section", "hidden");
-      addClass("#control-hud-mesh-section", "hidden");
-    }
-
     this.setupControlHud();
 
     this.setupSkyWithStyle(this.skyStyle);
 
     this.setupSound();
-
-    this.socket = io("http://104.131.72.3:3201");
-    this.socket.on("fresh-tweet", this.handleNewTweet.bind(this));
   }
 
   _inherits(MainScene, _SheenScene);
 
   _createClass(MainScene, {
+    doTimedWork: {
+      value: function doTimedWork(inSimpleMode) {
+        _get(Object.getPrototypeOf(MainScene.prototype), "doTimedWork", this).call(this);
+
+        this.useMeshes = !inSimpleMode;
+
+        if (!this.useMeshes) {
+          addClass(".tweet-ticker", "nomesh");
+          addClass(".ticker-tweet-text", "nomesh");
+          addClass(".stat-hud", "nomesh");
+          addClass("#control-hud-mesh-section", "hidden");
+        }
+
+        this.socket = io("http://104.131.72.3:3201");
+        this.socket.on("fresh-tweet", this.handleNewTweet.bind(this));
+      }
+    },
     setupControlHud: {
       value: function setupControlHud() {
         var _this = this;
@@ -2696,10 +2701,8 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         });
         setupToggleClickHandler(document.querySelector("#data-toggle"), "dataVisible", function () {
           if (_this.dataVisible) {
-            removeClass(".ticker-tweet-text", "hidden");
             removeClass(".stat-hud", "hidden");
           } else {
-            addClass(".ticker-tweet-text", "hidden");
             addClass(".stat-hud", "hidden");
           }
         });
@@ -3489,7 +3492,6 @@ var MainScene = require("./main-scene.es6").MainScene;
 var FlyControls = require("./controls/fly-controls");
 
 var ON_PHONE = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-var USE_CONTROLS = false;
 
 var BaseLoadingText = "is loading";
 var $splashStatus = $("#splash-status");
@@ -3506,8 +3508,6 @@ var Sheen = (function (_ThreeBoiler) {
       onPhone: ON_PHONE
     });
 
-    this.useControls = USE_CONTROLS;
-
     var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
     if (!isChrome) {
       $("#splash-please-use-chrome").show();
@@ -3520,16 +3520,6 @@ var Sheen = (function (_ThreeBoiler) {
 
       this.renderer.gammaInput = true;
       this.renderer.gammaOutput = true;
-    }
-
-    if (this.useControls) {
-      this.controls = new FlyControls(this.camera, {
-        allowYMovement: false,
-        movementSpeed: 15,
-        restrictedXRange: { min: -195, max: 195 },
-        restrictedZRange: { min: -195, max: 195 }
-      });
-      this.scene.add(this.controls.getObject());
     }
 
     this.mainScene = new MainScene(this.renderer, this.camera, this.scene, { onPhone: ON_PHONE });
@@ -3546,18 +3536,21 @@ var Sheen = (function (_ThreeBoiler) {
         return;
       }
 
-      if (_this.useControls) {
-        if (_this.controls.requestPointerlock) {
-          _this.controls.requestPointerlock();
-        }
-        _this.controls.enabled = true;
+      if (_this.hasStarted) {
+        _this.mainScene.click(ev);
       }
+    });
 
+    $("#click-to-start").click(function () {
       if (!_this.hasStarted) {
-        _this.start();
+        _this.start(false);
       }
+    });
 
-      _this.mainScene.click(ev);
+    $("#click-to-start-simple").click(function () {
+      if (!_this.hasStarted) {
+        _this.start(true);
+      }
     });
 
     $(document).mousemove(function (ev) {
@@ -3667,29 +3660,29 @@ var Sheen = (function (_ThreeBoiler) {
         $splashStatus.css("font-style", "italic");
 
         if (this.onPhone) {
-          $("#mobile-error-overlay").fadeIn(1000);
-        } else {
-          setTimeout(function () {
-            if (!_this.hasStarted) {
-              $("#splash-controls").fadeIn(1000);
-            }
-          }, 250);
-          setTimeout(function () {
-            if (!_this.hasStarted) {
-              $("#click-to-start").fadeIn(1000);
-            }
-          }, 1750);
+          $("#splash-mobile-warning").fadeIn(1000);
         }
+
+        setTimeout(function () {
+          if (!_this.hasStarted) {
+            $("#splash-controls").fadeIn(1000);
+          }
+        }, 250);
+        setTimeout(function () {
+          if (!_this.hasStarted) {
+            $(".click-to-start-container").fadeIn(1000);
+          }
+        }, 1750);
       }
     },
     start: {
-      value: function start() {
+      value: function start(simpleMode) {
         $(".splash-overlay").fadeOut(1000);
         if (this.onPhone) {
           $("#mobile-error-overlay").fadeOut(1000);
         }
 
-        this.mainScene.doTimedWork();
+        this.mainScene.doTimedWork(simpleMode);
 
         this.hasStarted = true;
       }
