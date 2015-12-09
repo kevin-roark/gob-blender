@@ -77,6 +77,10 @@ export class SheenScene {
 
   }
 
+  keypress() {
+    
+  }
+
   /// Protected overrides
 
   children() {

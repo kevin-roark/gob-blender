@@ -8,20 +8,20 @@ var Tone = require('tone');
 var nlp = require("nlp_compromise");
 
 import {SheenScene} from './sheen-scene.es6';
+import {WordTracker} from './word-tracker.es6';
 
-var MAX_MESH_COUNT = 100;
 var TWEETS_PER_SECOND = 3;
-var SCENE_RADIUS = 100;
 
 export class MainScene extends SheenScene {
 
   /// Init
 
-
   constructor(renderer, camera, scene, options) {
     super(renderer, camera, scene, options);
 
     this.onPhone = options.onPhone || false;
+    this.useMeshes = options.useMeshes !== undefined ? options.useMeshes : true;
+
     this.useSkybox = false;
     this.useSkysphere = true;
     this.skyboxNum = 1;
@@ -34,7 +34,8 @@ export class MainScene extends SheenScene {
     this.useSynth = true;
     this.soundOn = true;
     this.pushDelay = 5000;
-    this.useMeshes = true;
+    this.rotationRadius = 100;
+    this.maxMeshCount = 100;
 
     this.zoomIncrement = 1;
     this.cameraRotationIncrement = 0.002;
@@ -64,25 +65,9 @@ export class MainScene extends SheenScene {
     this.mostFrequentAdjectivesElement = document.querySelector('#most-frequent-adjectives-list');
 
     if (!this.useMeshes) {
-      var tweetTicker = document.querySelectorAll(".tweet-ticker");
-
-      for (var i = 0; i < tweetTicker.length; i++) {
-          tweetTicker[i].style.left = "25%";
-          tweetTicker[i].style.top = "20%";
-      }
-
-      var tweetTickerText = document.querySelectorAll(".ticker-tweet-text");
-
-      for (var i = 0; i < tweetTickerText.length; i++) {
-          tweetTickerText[i].style.fontSize = "30px";
-      }
-
-      var statHud = document.querySelectorAll(".stat-hud");
-
-      for (var i = 0; i < statHud.length; i++) {
-          statHud[i].style.fontSize = "25px";
-          statHud[i].style.fontFamily = "Helvetica";
-      }
+      addClass('.tweet-ticker', 'nomesh');
+      addClass('.ticker-tweet-text', 'nomesh');
+      addClass('.stat-hud', 'nomesh');
     }
 
     this.sounds = {};
@@ -183,9 +168,10 @@ export class MainScene extends SheenScene {
 			scene.add( skymesh );
     }
 
-    if (this.soundOn) {this.makeHoldNotes();}
-    if (this.soundOn) {this.makeHoldNotes2();}
-
+    if (this.soundOn) {
+      this.makeHoldNotes();
+      this.makeHoldNotes2();
+    }
   }
 
   /// Overrides
@@ -195,26 +181,32 @@ export class MainScene extends SheenScene {
 
     this.renderer.setClearColor(0xf0f0f0);
 
-    if (!this.domMode) {
-      // the heaven and the lights
-      this.makeLights();
-    }
-  }
+    var light = new THREE.SpotLight(0xffffff, 1.5);
+    light.position.set(0, 500, 2000);
+    light.castShadow = true;
 
-  doTimedWork() {
-    super.doTimedWork();
+    light.shadowCameraNear = 200;
+    light.shadowCameraFar = this.camera.far;
+    light.shadowCameraFov = 50;
+
+    light.shadowBias = -0.00022;
+
+    light.shadowMapWidth = 2048;
+    light.shadowMapHeight = 2048;
+
+    this.scene.add(light);
   }
 
   update(dt) {
     super.update(dt);
 
-    if (this.rotateCamera){
+    if (this.rotateCamera) {
       this.cameraRotationAngle += this.cameraRotationIncrement; //0.002;
     }
 
-    this.camera.position.x = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
-    this.camera.position.y = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
-    this.camera.position.z = SCENE_RADIUS * Math.cos(this.cameraRotationAngle);
+    this.camera.position.x = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+    this.camera.position.y = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+    this.camera.position.z = this.rotationRadius * Math.cos(this.cameraRotationAngle);
     this.camera.lookAt(this.scene.position);
 
     if (this.detailedTweetMesh) {
@@ -224,50 +216,78 @@ export class MainScene extends SheenScene {
     }
   }
 
-  // Interaction
+  /// Interaction
+
   zoomIn() {
-    if (SCENE_RADIUS > 1){
-      SCENE_RADIUS -= this.zoomIncrement;
+    if (this.rotationRadius > 1){
+      this.rotationRadius -= this.zoomIncrement;
     }
-    console.log(SCENE_RADIUS);
   }
 
   zoomOut() {
-    if (SCENE_RADIUS < 250){
-      SCENE_RADIUS += this.zoomIncrement;
+    if (this.rotationRadius < 250){
+      this.rotationRadius += this.zoomIncrement;
     }
   }
 
-  rotateLeft(){
-    if (this.rotateCamera){
+  rotateLeft() {
+    if (this.rotateCamera) {
       if (this.cameraRotationIncrement > 0.0002){
         this.cameraRotationIncrement -= 0.0001;
       }
     }
-    else{
+    else {
       this.cameraRotationAngle -= this.cameraRotationIncrement * 6;
     }
-    console.log(this.cameraRotationIncrement);
   }
 
-  rotateRight(){
-    if (this.rotateCamera){
-      if (this.cameraRotationIncrement < 0.01){
+  rotateRight() {
+    if (this.rotateCamera) {
+      if (this.cameraRotationIncrement < 0.01) {
         this.cameraRotationIncrement += 0.0001;
       }
     }
-    else{
+    else {
       this.cameraRotationAngle += this.cameraRotationIncrement * 6;
     }
-    console.log(this.cameraRotationIncrement);
+  }
+
+  randomJump() {
+    this.cameraRotationAngle += Math.random() * 6;
   }
 
   spacebarPressed(){
     this.rotateCamera = !this.rotateCamera;
   }
 
-  randomJump(){
-      this.cameraRotationAngle += Math.random()*6;
+  keypress(keycode) {
+    super.keypress(keycode);
+
+    switch (keycode) {
+      case 38:  /* up */
+      case 119: /* w */
+        this.zoomIn();
+        break;
+
+      case 40:  /* down */
+      case 115: /* s */
+        this.zoomOut();
+        break;
+
+      case 37:  /* left */
+      case 97: /* a */
+        this.rotateLeft();
+        break;
+
+      case 39:  /* right */
+      case 100: /* d */
+        this.rotateRight();
+        break;
+
+      case 106: /* j */
+        this.randomJump();
+        break;
+    }
   }
 
   move(ev) {
@@ -435,11 +455,10 @@ export class MainScene extends SheenScene {
       new THREE.SphereGeometry(1, 32, 32),
       new THREE.MeshLambertMaterial({
         color: this.colorForSentiment(tweetData.sentiment)
-        //map: this.religionTextureForSentiment(tweetData.sentiment)
       })
     );
 
-    if(this.useMeshImages){
+    if (this.useMeshImages) {
       mesh.material.map = this.religionTextureForSentiment(tweetData.sentiment);
     }
 
@@ -451,7 +470,7 @@ export class MainScene extends SheenScene {
     var scale = {value: 0.05};
     var updateMeshScale = () => { mesh.scale.set(scale.value, scale.value, scale.value); };
     updateMeshScale();
-    var meshTween = new TWEEN.Tween(scale).to({value: Math.random() * 2 + (tweetData.tweet.text.length / 40)}, 1000);
+    var meshTween = new TWEEN.Tween(scale).to({value: Math.random() * 2 + (tweetData.tweet.text.length / 40)}, 500);
     meshTween.onUpdate(updateMeshScale);
     meshTween.easing(TWEEN.Easing.Circular.Out);
     setTimeout(() => { meshTween.start(); }, this.pushDelay);
@@ -459,7 +478,7 @@ export class MainScene extends SheenScene {
     this.scene.add(mesh);
     this.tweetMeshes.push(mesh);
 
-    var lifetime = (MAX_MESH_COUNT / TWEETS_PER_SECOND) * 1000 - 5000;
+    var lifetime = (this.maxMeshCount / TWEETS_PER_SECOND) * 1000 - 500;
     setTimeout(() => {
       removeFromArray(this.tweetMeshes, mesh);
 
@@ -467,7 +486,7 @@ export class MainScene extends SheenScene {
         this.bringDetailTweetBackHome();
       }
 
-      var deathTween = new TWEEN.Tween(scale).to({value: 0.01}, 5000);
+      var deathTween = new TWEEN.Tween(scale).to({value: 0.01}, 500);
       deathTween.onUpdate(updateMeshScale);
       deathTween.easing(TWEEN.Easing.Circular.Out);
       deathTween.onComplete(() => { this.scene.remove(mesh); });
@@ -498,28 +517,6 @@ export class MainScene extends SheenScene {
   }
 
   fuzzySentiment(score) {
-    /* if (score > 15) {
-      return 'amazing';
-    }
-    else if (score > 9) {
-      return 'great';
-    }
-    else if (score > 3) {
-      return 'good';
-    }
-    else if (score > -2) {
-      return 'ok';
-    }
-    else if (score > -5) {
-      return 'bad';
-    }
-    else if (score > -10) {
-      return 'worse';
-    }
-    else {
-      return 'horrible';
-    }*/
-
     if (score > 10) {
       return 'amazing';
     }
@@ -555,7 +552,7 @@ export class MainScene extends SheenScene {
     return color;
   }
 
-  makeHoldNotes (){
+  makeHoldNotes() {
     var sounds = this.sounds;
     var holdSoundArray = [];
     holdSoundArray = [sounds.A,sounds.C,sounds.C2,sounds.D,sounds.E,sounds.F,sounds.G];
@@ -565,8 +562,7 @@ export class MainScene extends SheenScene {
       holdSound.play();
     }
     var holdDelay = 3000 + Math.random()*Math.random()*10000;
-    //console.log(holdDelay);
-    setTimeout(() => { this.makeHoldNotes(); }, holdDelay);
+    setTimeout(this.makeHoldNotes.bind(this), holdDelay);
   }
 
   makeHoldNotes2 (){
@@ -579,8 +575,7 @@ export class MainScene extends SheenScene {
       holdSound.play();
     }
     var holdDelay = 3000 + Math.random()*Math.random()*20000;
-    //console.log(holdDelay);
-    setTimeout(() => { this.makeHoldNotes2(); }, holdDelay);
+    setTimeout(this.makeHoldNotes2.bind(this), holdDelay);
   }
 
   makeGodSound(score) {
@@ -730,8 +725,7 @@ export class MainScene extends SheenScene {
       //noteArray = ["C0"];
     }
 
-    if (score > 15)
-    {
+    if (score > 15) {
       noteArray = ["C8","D8","E8","F8","G8","A8","C9","D9","E9","F9","G9","A9"];
     }
     else if (score > 10) {
@@ -753,7 +747,7 @@ export class MainScene extends SheenScene {
       noteArray = ["C1","D1","E1","F1","G1","A1"];
     }
 
-    if(this.useInstruments){
+    if (this.useInstruments) {
       sound = kt.choice(soundArray);
       if (sound.isPaused() || sound.getTime() > 0.2) {
         sound.setTime(0);
@@ -769,36 +763,16 @@ export class MainScene extends SheenScene {
       }
     }
 
-
     var maxMagnitude = 30;
     var clampedScore = score < 0 ? score : Math.min(score, maxMagnitude);
     var percent = (clampedScore / maxMagnitude)/2;
 
-    if(this.useSynth){
+    if (this.useSynth) {
       var note = kt.choice(noteArray);
       this.panner.pan.value = 0.5 + percent;
       this.sineSynth.triggerAttackRelease(note, "32n");
       //this.triSynth.triggerAttackRelease(note, "16n");
     }
-  }
-
-  // Creation
-
-  makeLights() {
-    var light = new THREE.SpotLight(0xffffff, 1.5);
-    light.position.set(0, 500, 2000);
-    light.castShadow = true;
-
-    light.shadowCameraNear = 200;
-    light.shadowCameraFar = this.camera.far;
-    light.shadowCameraFov = 50;
-
-    light.shadowBias = -0.00022;
-
-    light.shadowMapWidth = 2048;
-    light.shadowMapHeight = 2048;
-
-    this.scene.add(light);
   }
 }
 
@@ -816,54 +790,9 @@ function urlify(text) {
     });
 }
 
-class WordTracker {
-  constructor(options) {
-    if (!options) options = {};
-    this.numberOfMostFrequentWords = options.numberOfMostFrequentWords || 3;
-    this.bannedWords = options.bannedWords || [];
-
-    this.countmap = {};
-    this.mostFrequentWords = [];
+function addClass(selector, name) {
+  var els = document.querySelectorAll(selector);
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.add(name);
   }
-
-  track(words) {
-    for (var i = 0; i < words.length; i++) {
-      var word = words[i].replace(/\s/g, '');
-      if (word.length === 0 || this.bannedWords.indexOf(word.toLowerCase()) >= 0) {
-        continue;
-      }
-
-      var count = this.countmap[word] || 0;
-      count += 1;
-      this.countmap[word] = count;
-
-      for (var j = 0; j < this.numberOfMostFrequentWords; j++) {
-        var frequentWord = this.mostFrequentWords[j];
-        var frequentWordCount = this.countmap[frequentWord] || 0;
-        if (count > frequentWordCount) {
-          // this becomes a frequent word
-          var currentIndex = this.mostFrequentWords.indexOf(word);
-          if (currentIndex >= 0) {
-            // already in list, swap
-            this.mostFrequentWords[currentIndex] = frequentWord;
-            this.mostFrequentWords[j] = word;
-          }
-          else {
-            // insert into list
-            this.mostFrequentWords.splice(j, 0, word);
-            if (this.mostFrequentWords.length > this.numberOfMostFrequentWords) {
-              this.mostFrequentWords.pop();
-            }
-          }
-
-          break; // get out
-        }
-      }
-    }
-  }
-
-  mostFrequentWordsList() {
-    return this.mostFrequentWords.join(', ');
-  }
-
 }

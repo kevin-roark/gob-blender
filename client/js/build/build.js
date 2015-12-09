@@ -391,7 +391,7 @@ module.exports = function (camera, options) {
 	this.updateRotationVector();
 };
 
-},{"./pointerlocker":2,"three":107}],2:[function(require,module,exports){
+},{"./pointerlocker":2,"three":108}],2:[function(require,module,exports){
 "use strict";
 
 module.exports = function () {
@@ -2538,7 +2538,7 @@ module.exports = (function () {
 	return Physijs;
 })();
 
-},{"three":107}],5:[function(require,module,exports){
+},{"three":108}],5:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -2563,9 +2563,9 @@ var nlp = require("nlp_compromise");
 
 var SheenScene = require("./sheen-scene.es6").SheenScene;
 
-var MAX_MESH_COUNT = 100;
+var WordTracker = require("./word-tracker.es6").WordTracker;
+
 var TWEETS_PER_SECOND = 3;
-var SCENE_RADIUS = 100;
 
 var MainScene = exports.MainScene = (function (_SheenScene) {
 
@@ -2579,6 +2579,8 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     _get(Object.getPrototypeOf(MainScene.prototype), "constructor", this).call(this, renderer, camera, scene, options);
 
     this.onPhone = options.onPhone || false;
+    this.useMeshes = options.useMeshes !== undefined ? options.useMeshes : true;
+
     this.useSkybox = false;
     this.useSkysphere = true;
     this.skyboxNum = 1;
@@ -2591,7 +2593,8 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.useSynth = true;
     this.soundOn = true;
     this.pushDelay = 5000;
-    this.useMeshes = true;
+    this.rotationRadius = 100;
+    this.maxMeshCount = 100;
 
     this.zoomIncrement = 1;
     this.cameraRotationIncrement = 0.002;
@@ -2621,25 +2624,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.mostFrequentAdjectivesElement = document.querySelector("#most-frequent-adjectives-list");
 
     if (!this.useMeshes) {
-      var tweetTicker = document.querySelectorAll(".tweet-ticker");
-
-      for (var i = 0; i < tweetTicker.length; i++) {
-        tweetTicker[i].style.left = "25%";
-        tweetTicker[i].style.top = "20%";
-      }
-
-      var tweetTickerText = document.querySelectorAll(".ticker-tweet-text");
-
-      for (var i = 0; i < tweetTickerText.length; i++) {
-        tweetTickerText[i].style.fontSize = "30px";
-      }
-
-      var statHud = document.querySelectorAll(".stat-hud");
-
-      for (var i = 0; i < statHud.length; i++) {
-        statHud[i].style.fontSize = "25px";
-        statHud[i].style.fontFamily = "Helvetica";
-      }
+      addClass(".tweet-ticker", "nomesh");
+      addClass(".ticker-tweet-text", "nomesh");
+      addClass(".stat-hud", "nomesh");
     }
 
     this.sounds = {};
@@ -2741,8 +2728,6 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
     if (this.soundOn) {
       this.makeHoldNotes();
-    }
-    if (this.soundOn) {
       this.makeHoldNotes2();
     }
   }
@@ -2759,15 +2744,20 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
         this.renderer.setClearColor(15790320);
 
-        if (!this.domMode) {
-          // the heaven and the lights
-          this.makeLights();
-        }
-      }
-    },
-    doTimedWork: {
-      value: function doTimedWork() {
-        _get(Object.getPrototypeOf(MainScene.prototype), "doTimedWork", this).call(this);
+        var light = new THREE.SpotLight(16777215, 1.5);
+        light.position.set(0, 500, 2000);
+        light.castShadow = true;
+
+        light.shadowCameraNear = 200;
+        light.shadowCameraFar = this.camera.far;
+        light.shadowCameraFov = 50;
+
+        light.shadowBias = -0.00022;
+
+        light.shadowMapWidth = 2048;
+        light.shadowMapHeight = 2048;
+
+        this.scene.add(light);
       }
     },
     update: {
@@ -2778,9 +2768,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
           this.cameraRotationAngle += this.cameraRotationIncrement; //0.002;
         }
 
-        this.camera.position.x = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
-        this.camera.position.y = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
-        this.camera.position.z = SCENE_RADIUS * Math.cos(this.cameraRotationAngle);
+        this.camera.position.x = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+        this.camera.position.y = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+        this.camera.position.z = this.rotationRadius * Math.cos(this.cameraRotationAngle);
         this.camera.lookAt(this.scene.position);
 
         if (this.detailedTweetMesh) {
@@ -2792,19 +2782,18 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     zoomIn: {
 
-      // Interaction
+      /// Interaction
 
       value: function zoomIn() {
-        if (SCENE_RADIUS > 1) {
-          SCENE_RADIUS -= this.zoomIncrement;
+        if (this.rotationRadius > 1) {
+          this.rotationRadius -= this.zoomIncrement;
         }
-        console.log(SCENE_RADIUS);
       }
     },
     zoomOut: {
       value: function zoomOut() {
-        if (SCENE_RADIUS < 250) {
-          SCENE_RADIUS += this.zoomIncrement;
+        if (this.rotationRadius < 250) {
+          this.rotationRadius += this.zoomIncrement;
         }
       }
     },
@@ -2817,7 +2806,6 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         } else {
           this.cameraRotationAngle -= this.cameraRotationIncrement * 6;
         }
-        console.log(this.cameraRotationIncrement);
       }
     },
     rotateRight: {
@@ -2829,7 +2817,11 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         } else {
           this.cameraRotationAngle += this.cameraRotationIncrement * 6;
         }
-        console.log(this.cameraRotationIncrement);
+      }
+    },
+    randomJump: {
+      value: function randomJump() {
+        this.cameraRotationAngle += Math.random() * 6;
       }
     },
     spacebarPressed: {
@@ -2837,9 +2829,40 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         this.rotateCamera = !this.rotateCamera;
       }
     },
-    randomJump: {
-      value: function randomJump() {
-        this.cameraRotationAngle += Math.random() * 6;
+    keypress: {
+      value: function keypress(keycode) {
+        _get(Object.getPrototypeOf(MainScene.prototype), "keypress", this).call(this, keycode);
+
+        switch (keycode) {
+          case 38: /* up */
+          case 119:
+            /* w */
+            this.zoomIn();
+            break;
+
+          case 40: /* down */
+          case 115:
+            /* s */
+            this.zoomOut();
+            break;
+
+          case 37: /* left */
+          case 97:
+            /* a */
+            this.rotateLeft();
+            break;
+
+          case 39: /* right */
+          case 100:
+            /* d */
+            this.rotateRight();
+            break;
+
+          case 106:
+            /* j */
+            this.randomJump();
+            break;
+        }
       }
     },
     move: {
@@ -3019,7 +3042,6 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
         var mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshLambertMaterial({
           color: this.colorForSentiment(tweetData.sentiment)
-          //map: this.religionTextureForSentiment(tweetData.sentiment)
         }));
 
         if (this.useMeshImages) {
@@ -3036,7 +3058,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
           mesh.scale.set(scale.value, scale.value, scale.value);
         };
         updateMeshScale();
-        var meshTween = new TWEEN.Tween(scale).to({ value: Math.random() * 2 + tweetData.tweet.text.length / 40 }, 1000);
+        var meshTween = new TWEEN.Tween(scale).to({ value: Math.random() * 2 + tweetData.tweet.text.length / 40 }, 500);
         meshTween.onUpdate(updateMeshScale);
         meshTween.easing(TWEEN.Easing.Circular.Out);
         setTimeout(function () {
@@ -3046,7 +3068,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         this.scene.add(mesh);
         this.tweetMeshes.push(mesh);
 
-        var lifetime = MAX_MESH_COUNT / TWEETS_PER_SECOND * 1000 - 5000;
+        var lifetime = this.maxMeshCount / TWEETS_PER_SECOND * 1000 - 500;
         setTimeout(function () {
           removeFromArray(_this.tweetMeshes, mesh);
 
@@ -3054,7 +3076,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
             _this.bringDetailTweetBackHome();
           }
 
-          var deathTween = new TWEEN.Tween(scale).to({ value: 0.01 }, 5000);
+          var deathTween = new TWEEN.Tween(scale).to({ value: 0.01 }, 500);
           deathTween.onUpdate(updateMeshScale);
           deathTween.easing(TWEEN.Easing.Circular.Out);
           deathTween.onComplete(function () {
@@ -3086,28 +3108,6 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     fuzzySentiment: {
       value: function fuzzySentiment(score) {
-        /* if (score > 15) {
-          return 'amazing';
-        }
-        else if (score > 9) {
-          return 'great';
-        }
-        else if (score > 3) {
-          return 'good';
-        }
-        else if (score > -2) {
-          return 'ok';
-        }
-        else if (score > -5) {
-          return 'bad';
-        }
-        else if (score > -10) {
-          return 'worse';
-        }
-        else {
-          return 'horrible';
-        }*/
-
         if (score > 10) {
           return "amazing";
         } else if (score > 0) {
@@ -3141,8 +3141,6 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     makeHoldNotes: {
       value: function makeHoldNotes() {
-        var _this = this;
-
         var sounds = this.sounds;
         var holdSoundArray = [];
         holdSoundArray = [sounds.A, sounds.C, sounds.C2, sounds.D, sounds.E, sounds.F, sounds.G];
@@ -3152,16 +3150,11 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
           holdSound.play();
         }
         var holdDelay = 3000 + Math.random() * Math.random() * 10000;
-        //console.log(holdDelay);
-        setTimeout(function () {
-          _this.makeHoldNotes();
-        }, holdDelay);
+        setTimeout(this.makeHoldNotes.bind(this), holdDelay);
       }
     },
     makeHoldNotes2: {
       value: function makeHoldNotes2() {
-        var _this = this;
-
         var sounds = this.sounds;
         var holdSoundArray = [];
         holdSoundArray = [sounds.A, sounds.C, sounds.C2, sounds.D, sounds.E, sounds.F, sounds.G];
@@ -3171,10 +3164,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
           holdSound.play();
         }
         var holdDelay = 3000 + Math.random() * Math.random() * 20000;
-        //console.log(holdDelay);
-        setTimeout(function () {
-          _this.makeHoldNotes2();
-        }, holdDelay);
+        setTimeout(this.makeHoldNotes2.bind(this), holdDelay);
       }
     },
     makeGodSound: {
@@ -3340,27 +3330,6 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
           //this.triSynth.triggerAttackRelease(note, "16n");
         }
       }
-    },
-    makeLights: {
-
-      // Creation
-
-      value: function makeLights() {
-        var light = new THREE.SpotLight(16777215, 1.5);
-        light.position.set(0, 500, 2000);
-        light.castShadow = true;
-
-        light.shadowCameraNear = 200;
-        light.shadowCameraFar = this.camera.far;
-        light.shadowCameraFov = 50;
-
-        light.shadowBias = -0.00022;
-
-        light.shadowMapWidth = 2048;
-        light.shadowMapHeight = 2048;
-
-        this.scene.add(light);
-      }
     }
   });
 
@@ -3381,66 +3350,14 @@ function urlify(text) {
   });
 }
 
-var WordTracker = (function () {
-  function WordTracker(options) {
-    _classCallCheck(this, WordTracker);
-
-    if (!options) options = {};
-    this.numberOfMostFrequentWords = options.numberOfMostFrequentWords || 3;
-    this.bannedWords = options.bannedWords || [];
-
-    this.countmap = {};
-    this.mostFrequentWords = [];
+function addClass(selector, name) {
+  var els = document.querySelectorAll(selector);
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.add(name);
   }
+}
 
-  _createClass(WordTracker, {
-    track: {
-      value: function track(words) {
-        for (var i = 0; i < words.length; i++) {
-          var word = words[i].replace(/\s/g, "");
-          if (word.length === 0 || this.bannedWords.indexOf(word.toLowerCase()) >= 0) {
-            continue;
-          }
-
-          var count = this.countmap[word] || 0;
-          count += 1;
-          this.countmap[word] = count;
-
-          for (var j = 0; j < this.numberOfMostFrequentWords; j++) {
-            var frequentWord = this.mostFrequentWords[j];
-            var frequentWordCount = this.countmap[frequentWord] || 0;
-            if (count > frequentWordCount) {
-              // this becomes a frequent word
-              var currentIndex = this.mostFrequentWords.indexOf(word);
-              if (currentIndex >= 0) {
-                // already in list, swap
-                this.mostFrequentWords[currentIndex] = frequentWord;
-                this.mostFrequentWords[j] = word;
-              } else {
-                // insert into list
-                this.mostFrequentWords.splice(j, 0, word);
-                if (this.mostFrequentWords.length > this.numberOfMostFrequentWords) {
-                  this.mostFrequentWords.pop();
-                }
-              }
-
-              break; // get out
-            }
-          }
-        }
-      }
-    },
-    mostFrequentWordsList: {
-      value: function mostFrequentWordsList() {
-        return this.mostFrequentWords.join(", ");
-      }
-    }
-  });
-
-  return WordTracker;
-})();
-
-},{"./lib/buzz":3,"./sheen-scene.es6":7,"kutility":10,"nlp_compromise":11,"socket.io-client":59,"three":107,"tone":108,"tween.js":109}],6:[function(require,module,exports){
+},{"./lib/buzz":3,"./sheen-scene.es6":7,"./word-tracker.es6":9,"kutility":11,"nlp_compromise":12,"socket.io-client":60,"three":108,"tone":109,"tween.js":110}],6:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -3593,36 +3510,7 @@ var Sheen = (function (_ThreeBoiler) {
       value: function keypress(keycode) {
         _get(Object.getPrototypeOf(Sheen.prototype), "keypress", this).call(this, keycode);
 
-        switch (keycode) {
-          case 38: /* up */
-          case 119:
-            /* w */
-            this.mainScene.zoomIn();
-            break;
-
-          case 40: /* down */
-          case 115:
-            /* s */
-            this.mainScene.zoomOut();
-            break;
-
-          case 37: /* left */
-          case 97:
-            /* a */
-            this.mainScene.rotateLeft();
-            break;
-
-          case 39: /* right */
-          case 100:
-            /* d */
-            this.mainScene.rotateRight();
-            break;
-
-          case 106:
-            /* j */
-            this.mainScene.randomJump();
-            break;
-        }
+        this.mainScene.keypress(keycode);
       }
     },
     spacebarPressed: {
@@ -3698,7 +3586,7 @@ $(function () {
   sheen.activate();
 });
 
-},{"./controls/fly-controls":1,"./lib/physi.js":4,"./main-scene.es6":5,"./three-boiler.es6":8,"jquery":9,"three":107,"tween.js":109}],7:[function(require,module,exports){
+},{"./controls/fly-controls":1,"./lib/physi.js":4,"./main-scene.es6":5,"./three-boiler.es6":8,"jquery":10,"three":108,"tween.js":110}],7:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -3790,6 +3678,9 @@ var SheenScene = exports.SheenScene = (function () {
     resize: {
       value: function resize() {}
     },
+    keypress: {
+      value: function keypress() {}
+    },
     children: {
 
       /// Protected overrides
@@ -3879,7 +3770,7 @@ var SheenScene = exports.SheenScene = (function () {
   return SheenScene;
 })();
 
-},{"jquery":9,"three":107}],8:[function(require,module,exports){
+},{"jquery":10,"three":108}],8:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -4042,7 +3933,77 @@ THREE.typeface_js = window._typeface_js;
 
 // lol
 
-},{"jquery":9,"three":107}],9:[function(require,module,exports){
+},{"jquery":10,"three":108}],9:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var WordTracker = exports.WordTracker = (function () {
+  function WordTracker(options) {
+    _classCallCheck(this, WordTracker);
+
+    if (!options) options = {};
+    this.numberOfMostFrequentWords = options.numberOfMostFrequentWords || 3;
+    this.bannedWords = options.bannedWords || [];
+
+    this.countmap = {};
+    this.mostFrequentWords = [];
+  }
+
+  _createClass(WordTracker, {
+    track: {
+      value: function track(words) {
+        for (var i = 0; i < words.length; i++) {
+          var word = words[i].replace(/\s/g, "");
+          if (word.length === 0 || this.bannedWords.indexOf(word.toLowerCase()) >= 0) {
+            continue;
+          }
+
+          var count = this.countmap[word] || 0;
+          count += 1;
+          this.countmap[word] = count;
+
+          for (var j = 0; j < this.numberOfMostFrequentWords; j++) {
+            var frequentWord = this.mostFrequentWords[j];
+            var frequentWordCount = this.countmap[frequentWord] || 0;
+            if (count > frequentWordCount) {
+              // this becomes a frequent word
+              var currentIndex = this.mostFrequentWords.indexOf(word);
+              if (currentIndex >= 0) {
+                // already in list, swap
+                this.mostFrequentWords[currentIndex] = frequentWord;
+                this.mostFrequentWords[j] = word;
+              } else {
+                // insert into list
+                this.mostFrequentWords.splice(j, 0, word);
+                if (this.mostFrequentWords.length > this.numberOfMostFrequentWords) {
+                  this.mostFrequentWords.pop();
+                }
+              }
+
+              break; // get out
+            }
+          }
+        }
+      }
+    },
+    mostFrequentWordsList: {
+      value: function mostFrequentWordsList() {
+        return this.mostFrequentWords.join(", ");
+      }
+    }
+  });
+
+  return WordTracker;
+})();
+
+},{}],10:[function(require,module,exports){
 /*!
  * jQuery JavaScript Library v2.1.3
  * http://jquery.com/
@@ -13249,7 +13210,7 @@ return jQuery;
 
 }));
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 
 /* export something */
 module.exports = new Kutility();
@@ -13823,7 +13784,7 @@ Kutility.prototype.blur = function(el, x) {
   this.setFilter(el, cf + f);
 };
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 // nlp_comprimise by @spencermountain  in 2014
 // most files are self-contained modules that optionally export for nodejs
 // this file loads them all together
@@ -13886,7 +13847,7 @@ module.exports = nlp;
 // console.log(nlp.pos("Tony Danza is great. He works in the bank.").sentences[1].tokens[0].analysis.reference_to())
 // console.log(nlp.pos("the FBI was hacked. He took their drugs.").sentences[1].tokens[2].analysis.reference_to())
 
-},{"./src/methods/localization/americanize":27,"./src/methods/localization/britishize":28,"./src/methods/syllables/syllable":29,"./src/methods/tokenization/ngram":30,"./src/methods/tokenization/sentence":31,"./src/methods/tokenization/tokenize":32,"./src/methods/transliteration/unicode_normalisation":33,"./src/parents/parents":45,"./src/pos":55,"./src/spot":58}],12:[function(require,module,exports){
+},{"./src/methods/localization/americanize":28,"./src/methods/localization/britishize":29,"./src/methods/syllables/syllable":30,"./src/methods/tokenization/ngram":31,"./src/methods/tokenization/sentence":32,"./src/methods/tokenization/tokenize":33,"./src/methods/transliteration/unicode_normalisation":34,"./src/parents/parents":46,"./src/pos":56,"./src/spot":59}],13:[function(require,module,exports){
 //the lexicon is a large hash of words and their predicted part-of-speech.
 // it plays a bootstrap-role in pos tagging in this library.
 // to save space, most of the list is derived from conjugation methods,
@@ -14458,7 +14419,7 @@ module.exports = main;
 // console.log(lexicon['loaves']=="NNS")
 // console.log(lexicon['he']=="PRP")
 
-},{"../parents/adjective/conjugate/convertables":34,"../parents/adjective/conjugate/to_adverb":35,"../parents/adjective/conjugate/to_comparative":36,"../parents/adjective/conjugate/to_superlative":38,"../parents/verb/conjugate/conjugate":49,"../parents/verb/conjugate/verb_irregulars":52,"./lexicon/abbreviations":13,"./lexicon/adjectives":14,"./lexicon/demonyms":15,"./lexicon/firstnames":16,"./lexicon/honourifics":17,"./lexicon/irregular_nouns":18,"./lexicon/multiples":19,"./lexicon/phrasal_verbs":20,"./lexicon/uncountables":21,"./lexicon/values":22,"./lexicon/verbs":23}],13:[function(require,module,exports){
+},{"../parents/adjective/conjugate/convertables":35,"../parents/adjective/conjugate/to_adverb":36,"../parents/adjective/conjugate/to_comparative":37,"../parents/adjective/conjugate/to_superlative":39,"../parents/verb/conjugate/conjugate":50,"../parents/verb/conjugate/verb_irregulars":53,"./lexicon/abbreviations":14,"./lexicon/adjectives":15,"./lexicon/demonyms":16,"./lexicon/firstnames":17,"./lexicon/honourifics":18,"./lexicon/irregular_nouns":19,"./lexicon/multiples":20,"./lexicon/phrasal_verbs":21,"./lexicon/uncountables":22,"./lexicon/values":23,"./lexicon/verbs":24}],14:[function(require,module,exports){
 //these are common word shortenings used in the lexicon and sentence segmentation methods
 //there are all nouns, or at the least, belong beside one.
 
@@ -14479,7 +14440,7 @@ main = main.concat(honourifics)
 
 module.exports = main;
 
-},{"./honourifics":17}],14:[function(require,module,exports){
+},{"./honourifics":18}],15:[function(require,module,exports){
 //adjectives that either aren't covered by rules, or have superlative/comparative forms
 //this list is the seed, from which various forms are conjugated
 module.exports= [
@@ -15167,7 +15128,7 @@ module.exports= [
     "less"
   ]
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 //adjectival forms of place names, as adjectives.
 module.exports= [
     "afghan",
@@ -15271,7 +15232,7 @@ module.exports= [
     "californian",
   ]
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 // common first-names in compressed form.
 //from http://www.ssa.gov/oact/babynames/limits.html  and http://www.servicealberta.gov.ab.ca/pdf/vs/2001_Boys.pdf
 //not sure what regional/cultural/demographic bias this has. Probably a lot.
@@ -15595,7 +15556,7 @@ module.exports = main;
 // console.log(firstnames['jan'])
 // console.log(JSON.stringify(Object.keys(firstnames).length, null, 2));
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 //these are common person titles used in the lexicon and sentence segmentation methods
 //they are also used to identify that a noun is a person
   var main = [
@@ -15653,7 +15614,7 @@ module.exports = main;
 
 module.exports = main;
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 //nouns with irregular plural/singular forms
 //used in noun.inflect, and also in the lexicon.
 //compressed with '_' to reduce some redundancy.
@@ -15725,7 +15686,7 @@ var main=[
 
 module.exports = main;
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 //common terms that are multi-word, but one part-of-speech
 //these should not include phrasal verbs, like 'looked out'. These are handled elsewhere.
 module.exports = {
@@ -15802,7 +15763,7 @@ module.exports = {
     "head start":"NN"
   }
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 //phrasal verbs are two words that really mean one verb.
 //'beef up' is one verb, and not some direction of beefing.
 //by @spencermountain, 2015 mit
@@ -15922,7 +15883,7 @@ Object.keys(main).forEach(function (s) {
 module.exports = main;
 // console.log(JSON.stringify(phrasal_verbs, null, 2))
 
-},{"../../parents/verb/conjugate/conjugate":49}],21:[function(require,module,exports){
+},{"../../parents/verb/conjugate/conjugate":50}],22:[function(require,module,exports){
 //common nouns that have no plural form. These are suprisingly rare
 //used in noun.inflect(), and added as nouns in lexicon
 module.exports=[
@@ -16077,7 +16038,7 @@ module.exports=[
     "hertz"
   ]
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 //terms that are "CD", a 'value' term
 module.exports = [
   //numbers
@@ -16150,7 +16111,7 @@ module.exports = [
   return h
 }, {})
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 //most-frequent non-irregular verbs, to be conjugated for the lexicon
 //this list is the seed, from which various forms are conjugated
 module.exports = [
@@ -16716,7 +16677,7 @@ module.exports = [
 
 ]
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 //the parts of speech used by this library. mostly standard, but some changes.
 module.exports = {
   //verbs
@@ -16910,7 +16871,7 @@ module.exports = {
   }
 }
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 // word suffixes with a high pos signal, generated with wordnet
 //by spencer kelly spencermountain@gmail.com  2014
 var data = {
@@ -17507,7 +17468,7 @@ module.exports = Object.keys(data).reduce(function (h, k) {
   return h
 }, {})
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 //regex patterns and parts of speech],
 module.exports= [
   [".[cts]hy$", "JJ"],
@@ -17629,7 +17590,7 @@ module.exports= [
 })
 
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 // convert british spellings into american ones
 // built with patterns+exceptions from https://en.wikipedia.org/wiki/British_spelling
 
@@ -17689,7 +17650,7 @@ module.exports = function (str) {
 // console.log(americanize("synthesise")=="synthesize")
 // console.log(americanize("synthesised")=="synthesized")
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 // convert american spellings into british ones
 // built with patterns+exceptions from https://en.wikipedia.org/wiki/British_spelling
 // (some patterns are only safe to do in one direction)
@@ -17753,7 +17714,7 @@ module.exports = function (str) {
   return str
 }
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 //chop a string into pronounced syllables
 
 module.exports = function (str) {
@@ -17847,7 +17808,7 @@ module.exports = function (str) {
 //broken
 // console.log(syllables("birchtree"))
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 //split a string into all possible parts
 
 module.exports = function (text, options) {
@@ -17909,7 +17870,7 @@ module.exports = function (text, options) {
 //console.log(module.exports("i really think that we all really think it's all good"))
 // console.log(module.exports("i said i rule", {max_size:1})) // word-count
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 //(Rule-based sentence boundary segmentation) - chop given text into its proper sentences.
 // Ignore periods/questions/exclamations used in acronyms/abbreviations/numbers, etc.
 // @spencermountain 2015 MIT
@@ -17960,7 +17921,7 @@ module.exports = function(text) {
 // console.log(sentence_parser("She was dead. He was ill.").length === 2)
 // console.log(sentence_parser("i think it is good ... or else.").length == 1)
 
-},{"../../data/lexicon/abbreviations":13}],32:[function(require,module,exports){
+},{"../../data/lexicon/abbreviations":14}],33:[function(require,module,exports){
 //split a string into 'words' - as intended to be most helpful for this library.
 
 var sentence_parser = require("./sentence")
@@ -18053,7 +18014,7 @@ module.exports = tokenize
 // console.log(tokenize("Joe in Toronto")[0].tokens.length==3)
 // console.log(tokenize("I am mega-rich")[0].tokens.length==3)
 
-},{"../../data/lexicon/multiples":19,"./sentence":31}],33:[function(require,module,exports){
+},{"../../data/lexicon/multiples":20,"./sentence":32}],34:[function(require,module,exports){
 // a hugely-ignorant, and widely subjective transliteration of latin, cryllic, greek unicode characters to english ascii.
 //http://en.wikipedia.org/wiki/List_of_Unicode_characters
 //https://docs.google.com/spreadsheet/ccc?key=0Ah46z755j7cVdFRDM1A2YVpwa1ZYWlpJM2pQZ003M0E
@@ -18153,7 +18114,7 @@ module.exports = {
 //   percentage: 100
 // }))
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 //these are adjectives that can become comparative + superlative with out "most/more"
 //its a whitelist for conjugation
 //this data is shared between comparative/superlative methods
@@ -18355,7 +18316,7 @@ module.exports= [
   return h
 },{})
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 //turn 'quick' into 'quickly'
 
 var main = function (str) {
@@ -18488,7 +18449,7 @@ module.exports = main;
 
 // console.log(adj_to_adv('direct'))
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 //turn 'quick' into 'quickly'
 var convertables = require("./convertables")
 
@@ -18586,7 +18547,7 @@ var main = function (str) {
 
 module.exports = main;
 
-},{"./convertables":34}],37:[function(require,module,exports){
+},{"./convertables":35}],38:[function(require,module,exports){
 //convert cute to cuteness
 
 module.exports = function (w) {
@@ -18653,7 +18614,7 @@ module.exports = function (w) {
   return w + "ness";
 };
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 //turn 'quick' into 'quickest'
 var convertables = require("./convertables")
 
@@ -18745,7 +18706,7 @@ module.exports = function (str) {
   return "most " + str
 }
 
-},{"./convertables":34}],39:[function(require,module,exports){
+},{"./convertables":35}],40:[function(require,module,exports){
 //wrapper for Adjective's methods
 var Adjective = function (str, sentence, word_i) {
   var the = this
@@ -18781,7 +18742,7 @@ var Adjective = function (str, sentence, word_i) {
 module.exports = Adjective;
 // console.log(new Adjective("crazy"))
 
-},{"../../data/parts_of_speech":24,"./conjugate/to_adverb":35,"./conjugate/to_comparative":36,"./conjugate/to_noun":37,"./conjugate/to_superlative":38}],40:[function(require,module,exports){
+},{"../../data/parts_of_speech":25,"./conjugate/to_adverb":36,"./conjugate/to_comparative":37,"./conjugate/to_noun":38,"./conjugate/to_superlative":39}],41:[function(require,module,exports){
 //turns 'quickly' into 'quick'
 module.exports = function (str) {
   var irregulars = {
@@ -18840,7 +18801,7 @@ module.exports = function (str) {
 // console.log(to_adjective('quickly') === 'quick')
 // console.log(to_adjective('marvelously') === 'marvelous')
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 //wrapper for Adverb's methods
 var Adverb = function (str, sentence, word_i) {
   var the = this
@@ -18873,7 +18834,7 @@ module.exports = Adverb;
 // console.log(new Adverb("suddenly").conjugate())
 // console.log(adverbs.conjugate('powerfully'))
 
-},{"../../data/parts_of_speech":24,"./conjugate/to_adjective":40}],42:[function(require,module,exports){
+},{"../../data/parts_of_speech":25,"./conjugate/to_adjective":41}],43:[function(require,module,exports){
 //converts nouns from plural and singular, and viceversases
 //some regex borrowed from pksunkara/inflect
 //https://github.com/pksunkara/inflect/blob/master/lib/defaults.js
@@ -19185,7 +19146,7 @@ module.exports = {
 // console.log(inflect.is_plural('children')==true)
 // console.log(inflect.singularize('mayors of chicago')=="mayor of chicago")
 
-},{"../../../data/lexicon/irregular_nouns":18,"../../../data/lexicon/uncountables":21}],43:[function(require,module,exports){
+},{"../../../data/lexicon/irregular_nouns":19,"../../../data/lexicon/uncountables":22}],44:[function(require,module,exports){
 //chooses an indefinite aricle 'a/an' for a word
 module.exports = function (str) {
   if (!str) {
@@ -19261,7 +19222,7 @@ module.exports = function (str) {
 
 // console.log(indefinite_article("wolf") === "a")
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 //wrapper for noun's methods
 var Noun = function (str, sentence, word_i) {
   var the = this
@@ -19615,7 +19576,7 @@ module.exports = Noun;
 // console.log(new Noun("illi G. Danza").pronoun()=="she")
 // console.log(new Noun("horses").pronoun()=="they")
 
-},{"../../data/lexicon/firstnames":16,"../../data/lexicon/honourifics":17,"../../data/parts_of_speech":24,"./conjugate/inflect":42,"./indefinite_article":43}],45:[function(require,module,exports){
+},{"../../data/lexicon/firstnames":17,"../../data/lexicon/honourifics":18,"../../data/parts_of_speech":25,"./conjugate/inflect":43,"./indefinite_article":44}],46:[function(require,module,exports){
 //Parents are classes for each main part of speech, with appropriate methods
 //load files if server-side, otherwise assume these are prepended already
 var Adjective = require("./adjective/index");
@@ -19647,7 +19608,7 @@ var parents = {
 
 module.exports = parents;
 
-},{"./adjective/index":39,"./adverb/index":41,"./noun/index":44,"./value/index":47,"./verb/index":54}],46:[function(require,module,exports){
+},{"./adjective/index":40,"./adverb/index":42,"./noun/index":45,"./value/index":48,"./verb/index":55}],47:[function(require,module,exports){
 // #generates properly-formatted dates from free-text date forms
 // #by spencer kelly 2014
 
@@ -20002,7 +19963,7 @@ module.exports = function (str, options) {
 // console.log(date_extractor("1998"))
 // console.log(date_extractor("1999"))
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 //wrapper for value's methods
 var Value = function (str, sentence, word_i) {
   var the = this
@@ -20051,7 +20012,7 @@ module.exports = Value;
 // console.log(new Value("fifty five").number())
 // console.log(new Value("june 5th 1998").date())
 
-},{"../../data/parts_of_speech":24,"./date_extractor":46,"./to_number":48}],48:[function(require,module,exports){
+},{"../../data/parts_of_speech":25,"./date_extractor":47,"./to_number":49}],49:[function(require,module,exports){
 // converts spoken numbers into integers  "fifty seven point eight" -> 57.8
 //
 // Spoken numbers take the following format
@@ -20333,7 +20294,7 @@ module.exports = main;
 // console.log(to_number("a hundred"))
 // console.log(to_number("four point seven seven"))
 
-},{}],49:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 //turn a verb into its other grammatical forms.
 var verb_to_doer = require("./to_doer")
 var verb_irregulars = require("./verb_irregulars")
@@ -20525,7 +20486,7 @@ module.exports = main;
 // console.log(module.exports("had tried"))
 // console.log(module.exports("have tried"))
 
-},{"./suffix_rules":50,"./to_doer":51,"./verb_irregulars":52,"./verb_rules":53}],50:[function(require,module,exports){
+},{"./suffix_rules":51,"./to_doer":52,"./verb_irregulars":53,"./verb_rules":54}],51:[function(require,module,exports){
 //generated from test data
 var compact = {
   "gerund": [
@@ -20626,7 +20587,7 @@ for (i = 0; i < l; i++) {
 }
 module.exports = suffix_rules;
 
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 //somone who does this present-tense verb
 //turn 'walk' into 'walker'
 module.exports = function (str) {
@@ -20689,7 +20650,7 @@ module.exports = function (str) {
 // console.log(verb_to_doer('sweep'))
 // console.log(verb_to_doer('watch'))
 
-},{}],52:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 var types = [
   'infinitive',
   'gerund',
@@ -21651,7 +21612,7 @@ module.exports = compact.map(function (arr) {
 
 // console.log(JSON.stringify(verb_irregulars, null, 2));
 
-},{}],53:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 // regex rules for each part of speech that convert it to all other parts of speech.
 // used in combination with the generic 'fallback' method
 var verb_rules = {
@@ -22103,7 +22064,7 @@ verb_rules=Object.keys(verb_rules).reduce(function(h,k){
 module.exports = verb_rules;
 // console.log(JSON.stringify(verb_rules, null, 2));
 
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 //wrapper for verb's methods
 var Verb = function (str, sentence, word_i) {
   var the = this
@@ -22225,7 +22186,7 @@ module.exports = Verb;
 // console.log(new Verb("will"))
 // console.log(new Verb("stalking").tense)
 
-},{"../../data/parts_of_speech":24,"./conjugate/conjugate":49}],55:[function(require,module,exports){
+},{"../../data/parts_of_speech":25,"./conjugate/conjugate":50}],56:[function(require,module,exports){
 var lexicon = require("./data/lexicon")
 var values = require("./data/lexicon/values")
 
@@ -22778,7 +22739,7 @@ module.exports = main;
 
 // console.log(pos("he's fun").sentences[0].tokens[1].normalised=="is")
 
-},{"./data/lexicon":12,"./data/lexicon/values":22,"./data/parts_of_speech":24,"./data/unambiguous_suffixes":25,"./data/word_rules":26,"./methods/tokenization/tokenize":32,"./parents/parents":45,"./section":56,"./sentence":57}],56:[function(require,module,exports){
+},{"./data/lexicon":13,"./data/lexicon/values":23,"./data/parts_of_speech":25,"./data/unambiguous_suffixes":26,"./data/word_rules":27,"./methods/tokenization/tokenize":33,"./parents/parents":46,"./section":57,"./sentence":58}],57:[function(require,module,exports){
 //a section is a block of text, with an arbitrary number of sentences
 //these methods are just wrappers around the ones in sentence.js
 var Section = function(sentences) {
@@ -22889,7 +22850,7 @@ var Section = function(sentences) {
 }
 module.exports = Section;
 
-},{}],57:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 // methods that hang on a parsed set of words
 // accepts parsed tokens
 var Sentence = function(tokens) {
@@ -23156,7 +23117,7 @@ var Sentence = function(tokens) {
 
 module.exports = Sentence;
 
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 //just a wrapper for text -> entities
 //most of this logic is in ./parents/noun
 var pos = require("./pos");
@@ -23192,11 +23153,11 @@ module.exports = main;
 // console.log(spot("Tony eats all day. Tony Hawk is cool.").map(function(s){return s}))
 // console.log(spot("My Hawk is cool").map(function(s){return s.normalised}))
 
-},{"./pos":55}],59:[function(require,module,exports){
+},{"./pos":56}],60:[function(require,module,exports){
 
 module.exports = require('./lib/');
 
-},{"./lib/":60}],60:[function(require,module,exports){
+},{"./lib/":61}],61:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -23285,7 +23246,7 @@ exports.connect = lookup;
 exports.Manager = require('./manager');
 exports.Socket = require('./socket');
 
-},{"./manager":61,"./socket":63,"./url":64,"debug":68,"socket.io-parser":102}],61:[function(require,module,exports){
+},{"./manager":62,"./socket":64,"./url":65,"debug":69,"socket.io-parser":103}],62:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -23790,7 +23751,7 @@ Manager.prototype.onreconnect = function(){
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":62,"./socket":63,"./url":64,"backo2":65,"component-bind":66,"component-emitter":67,"debug":68,"engine.io-client":69,"indexof":98,"object-component":99,"socket.io-parser":102}],62:[function(require,module,exports){
+},{"./on":63,"./socket":64,"./url":65,"backo2":66,"component-bind":67,"component-emitter":68,"debug":69,"engine.io-client":70,"indexof":99,"object-component":100,"socket.io-parser":103}],63:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -23816,7 +23777,7 @@ function on(obj, ev, fn) {
   };
 }
 
-},{}],63:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -24203,7 +24164,7 @@ Socket.prototype.disconnect = function(){
   return this;
 };
 
-},{"./on":62,"component-bind":66,"component-emitter":67,"debug":68,"has-binary":96,"socket.io-parser":102,"to-array":106}],64:[function(require,module,exports){
+},{"./on":63,"component-bind":67,"component-emitter":68,"debug":69,"has-binary":97,"socket.io-parser":103,"to-array":107}],65:[function(require,module,exports){
 (function (global){
 
 /**
@@ -24280,7 +24241,7 @@ function url(uri, loc){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"debug":68,"parseuri":100}],65:[function(require,module,exports){
+},{"debug":69,"parseuri":101}],66:[function(require,module,exports){
 
 /**
  * Expose `Backoff`.
@@ -24367,7 +24328,7 @@ Backoff.prototype.setJitter = function(jitter){
 };
 
 
-},{}],66:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 /**
  * Slice reference.
  */
@@ -24392,7 +24353,7 @@ module.exports = function(obj, fn){
   }
 };
 
-},{}],67:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -24558,7 +24519,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],68:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -24697,11 +24658,11 @@ try {
   if (window.localStorage) debug.enable(localStorage.debug);
 } catch(e){}
 
-},{}],69:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 
 module.exports =  require('./lib/');
 
-},{"./lib/":70}],70:[function(require,module,exports){
+},{"./lib/":71}],71:[function(require,module,exports){
 
 module.exports = require('./socket');
 
@@ -24713,7 +24674,7 @@ module.exports = require('./socket');
  */
 module.exports.parser = require('engine.io-parser');
 
-},{"./socket":71,"engine.io-parser":83}],71:[function(require,module,exports){
+},{"./socket":72,"engine.io-parser":84}],72:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -25422,7 +25383,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./transport":72,"./transports":73,"component-emitter":67,"debug":80,"engine.io-parser":83,"indexof":98,"parsejson":92,"parseqs":93,"parseuri":94}],72:[function(require,module,exports){
+},{"./transport":73,"./transports":74,"component-emitter":68,"debug":81,"engine.io-parser":84,"indexof":99,"parsejson":93,"parseqs":94,"parseuri":95}],73:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -25583,7 +25544,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"component-emitter":67,"engine.io-parser":83}],73:[function(require,module,exports){
+},{"component-emitter":68,"engine.io-parser":84}],74:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies
@@ -25640,7 +25601,7 @@ function polling(opts){
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling-jsonp":74,"./polling-xhr":75,"./websocket":77,"xmlhttprequest":78}],74:[function(require,module,exports){
+},{"./polling-jsonp":75,"./polling-xhr":76,"./websocket":78,"xmlhttprequest":79}],75:[function(require,module,exports){
 (function (global){
 
 /**
@@ -25877,7 +25838,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":76,"component-inherit":79}],75:[function(require,module,exports){
+},{"./polling":77,"component-inherit":80}],76:[function(require,module,exports){
 (function (global){
 /**
  * Module requirements.
@@ -26265,7 +26226,7 @@ function unloadHandler() {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":76,"component-emitter":67,"component-inherit":79,"debug":80,"xmlhttprequest":78}],76:[function(require,module,exports){
+},{"./polling":77,"component-emitter":68,"component-inherit":80,"debug":81,"xmlhttprequest":79}],77:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -26512,7 +26473,7 @@ Polling.prototype.uri = function(){
   return schema + '://' + this.hostname + port + this.path + query;
 };
 
-},{"../transport":72,"component-inherit":79,"debug":80,"engine.io-parser":83,"parseqs":93,"xmlhttprequest":78}],77:[function(require,module,exports){
+},{"../transport":73,"component-inherit":80,"debug":81,"engine.io-parser":84,"parseqs":94,"xmlhttprequest":79}],78:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -26752,7 +26713,7 @@ WS.prototype.check = function(){
   return !!WebSocket && !('__initialize' in WebSocket && this.name === WS.prototype.name);
 };
 
-},{"../transport":72,"component-inherit":79,"debug":80,"engine.io-parser":83,"parseqs":93,"ws":95}],78:[function(require,module,exports){
+},{"../transport":73,"component-inherit":80,"debug":81,"engine.io-parser":84,"parseqs":94,"ws":96}],79:[function(require,module,exports){
 // browser shim for xmlhttprequest module
 var hasCORS = require('has-cors');
 
@@ -26790,7 +26751,7 @@ module.exports = function(opts) {
   }
 }
 
-},{"has-cors":90}],79:[function(require,module,exports){
+},{"has-cors":91}],80:[function(require,module,exports){
 
 module.exports = function(a, b){
   var fn = function(){};
@@ -26798,7 +26759,7 @@ module.exports = function(a, b){
   a.prototype = new fn;
   a.prototype.constructor = a;
 };
-},{}],80:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -26947,7 +26908,7 @@ function load() {
 
 exports.enable(load());
 
-},{"./debug":81}],81:[function(require,module,exports){
+},{"./debug":82}],82:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -27146,7 +27107,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":82}],82:[function(require,module,exports){
+},{"ms":83}],83:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -27259,7 +27220,7 @@ function plural(ms, n, name) {
   return Math.ceil(ms / n) + ' ' + name + 's';
 }
 
-},{}],83:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -27857,7 +27818,7 @@ exports.decodePayloadAsBinary = function (data, binaryType, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./keys":84,"after":85,"arraybuffer.slice":86,"base64-arraybuffer":87,"blob":88,"has-binary":96,"utf8":89}],84:[function(require,module,exports){
+},{"./keys":85,"after":86,"arraybuffer.slice":87,"base64-arraybuffer":88,"blob":89,"has-binary":97,"utf8":90}],85:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -27878,7 +27839,7 @@ module.exports = Object.keys || function keys (obj){
   return arr;
 };
 
-},{}],85:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -27908,7 +27869,7 @@ function after(count, callback, err_cb) {
 
 function noop() {}
 
-},{}],86:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 /**
  * An abstraction for slicing an arraybuffer even when
  * ArrayBuffer.prototype.slice is not supported
@@ -27939,7 +27900,7 @@ module.exports = function(arraybuffer, start, end) {
   return result.buffer;
 };
 
-},{}],87:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 /*
  * base64-arraybuffer
  * https://github.com/niklasvh/base64-arraybuffer
@@ -28000,7 +27961,7 @@ module.exports = function(arraybuffer, start, end) {
   };
 })("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 
-},{}],88:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 (function (global){
 /**
  * Create a blob builder even when vendor prefixes exist
@@ -28100,7 +28061,7 @@ module.exports = (function() {
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],89:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/utf8js v2.0.0 by @mathias */
 ;(function(root) {
@@ -28348,7 +28309,7 @@ module.exports = (function() {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],90:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -28373,7 +28334,7 @@ try {
   module.exports = false;
 }
 
-},{"global":91}],91:[function(require,module,exports){
+},{"global":92}],92:[function(require,module,exports){
 
 /**
  * Returns `this`. Execute this without a "context" (i.e. without it being
@@ -28383,7 +28344,7 @@ try {
 
 module.exports = (function () { return this; })();
 
-},{}],92:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 (function (global){
 /**
  * JSON parse.
@@ -28418,7 +28379,7 @@ module.exports = function parsejson(data) {
   }
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],93:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 /**
  * Compiles a querystring
  * Returns string representation of the object
@@ -28457,7 +28418,7 @@ exports.decode = function(qs){
   return qry;
 };
 
-},{}],94:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -28498,7 +28459,7 @@ module.exports = function parseuri(str) {
     return uri;
 };
 
-},{}],95:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -28543,7 +28504,7 @@ function ws(uri, protocols, opts) {
 
 if (WebSocket) ws.prototype = WebSocket.prototype;
 
-},{}],96:[function(require,module,exports){
+},{}],97:[function(require,module,exports){
 (function (global){
 
 /*
@@ -28605,12 +28566,12 @@ function hasBinary(data) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"isarray":97}],97:[function(require,module,exports){
+},{"isarray":98}],98:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],98:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -28621,7 +28582,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],99:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 
 /**
  * HOP ref.
@@ -28706,7 +28667,7 @@ exports.length = function(obj){
 exports.isEmpty = function(obj){
   return 0 == exports.length(obj);
 };
-},{}],100:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -28733,7 +28694,7 @@ module.exports = function parseuri(str) {
   return uri;
 };
 
-},{}],101:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 (function (global){
 /*global Blob,File*/
 
@@ -28878,7 +28839,7 @@ exports.removeBlobs = function(data, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./is-buffer":103,"isarray":104}],102:[function(require,module,exports){
+},{"./is-buffer":104,"isarray":105}],103:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -29280,7 +29241,7 @@ function error(data){
   };
 }
 
-},{"./binary":101,"./is-buffer":103,"component-emitter":67,"debug":68,"isarray":104,"json3":105}],103:[function(require,module,exports){
+},{"./binary":102,"./is-buffer":104,"component-emitter":68,"debug":69,"isarray":105,"json3":106}],104:[function(require,module,exports){
 (function (global){
 
 module.exports = isBuf;
@@ -29297,9 +29258,9 @@ function isBuf(obj) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],104:[function(require,module,exports){
-arguments[4][97][0].apply(exports,arguments)
-},{"dup":97}],105:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
+arguments[4][98][0].apply(exports,arguments)
+},{"dup":98}],106:[function(require,module,exports){
 /*! JSON v3.2.6 | http://bestiejs.github.io/json3 | Copyright 2012-2013, Kit Cambridge | http://kit.mit-license.org */
 ;(function (window) {
   // Convenience aliases.
@@ -30162,7 +30123,7 @@ arguments[4][97][0].apply(exports,arguments)
   }
 }(this));
 
-},{}],106:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 module.exports = toArray
 
 function toArray(list, index) {
@@ -30177,7 +30138,7 @@ function toArray(list, index) {
     return array
 }
 
-},{}],107:[function(require,module,exports){
+},{}],108:[function(require,module,exports){
 var self = self || {};// File:src/Three.js
 
 /**
@@ -66162,7 +66123,7 @@ if (typeof exports !== 'undefined') {
   this['THREE'] = THREE;
 }
 
-},{}],108:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 (function (root) {
 	"use strict";
 	var Tone;
@@ -80858,7 +80819,7 @@ if (typeof exports !== 'undefined') {
 		root.Tone = Tone;
 	}
 } (this));
-},{}],109:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 /**
  * Tween.js - Licensed under the MIT license
  * https://github.com/tweenjs/tween.js

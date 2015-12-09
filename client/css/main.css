@@ -115,7 +115,7 @@ a {
   }
 
   .tweet-ticker.nomesh {
-    left: 25%; bottom: 80%;
+    left: 25%; bottom: 70%; max-width: 65%;
   }
     .ticker-tweet-text.nomesh {
       font-size: 30px;
@@ -140,5 +140,5 @@ a {
 
   .stat-hud.nomesh {
     font-size: 25px;
-    font-family: 'Helvetica', sans-serif;
+    max-width: 100%;
   }
