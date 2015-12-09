@@ -146,6 +146,10 @@ class Sheen extends ThreeBoiler {
       case 100: /* d */
       this.mainScene.rotateRight();
         break;
+
+      case 106: /* j */
+      this.mainScene.randomJump();
+        break;
     }
   }
 

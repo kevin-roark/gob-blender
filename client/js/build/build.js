@@ -2837,6 +2837,13 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         this.rotateCamera = !this.rotateCamera;
       }
     },
+    randomJump: {
+      value: function randomJump() {
+        if (!this.rotateCamera) {
+          this.cameraRotationAngle += Math.random() * 6;
+        }
+      }
+    },
     move: {
       value: function move(ev) {
         _get(Object.getPrototypeOf(MainScene.prototype), "move", this).call(this, ev);
@@ -3611,6 +3618,11 @@ var Sheen = (function (_ThreeBoiler) {
           case 100:
             /* d */
             this.mainScene.rotateRight();
+            break;
+
+          case 106:
+            /* j */
+            this.mainScene.randomJump();
             break;
         }
       }

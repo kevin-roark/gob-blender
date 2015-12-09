@@ -267,6 +267,12 @@ export class MainScene extends SheenScene {
     this.rotateCamera = !this.rotateCamera;
   }
 
+  randomJump(){
+    if (!this.rotateCamera){
+      this.cameraRotationAngle += Math.random()*6;
+    }
+  }
+
   move(ev) {
     super.move(ev);
 
