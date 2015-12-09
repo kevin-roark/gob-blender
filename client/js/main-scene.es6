@@ -507,7 +507,9 @@ export class MainScene extends SheenScene {
       }
     }, this.pushDelay);
 
-    if (this.useMeshes) {this.addTweetMesh(tweetData);}
+    if (this.useMeshes && this.appIsActive) {
+      this.addTweetMesh(tweetData);
+    }
   }
 
   processLanguage(tweet) {

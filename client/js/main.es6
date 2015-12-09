@@ -123,6 +123,14 @@ class Sheen extends ThreeBoiler {
     this.mainScene.update(this.clock.getDelta());
   }
 
+  setAppActive(active) {
+    super.setAppActive(active);
+
+    if (this.mainScene) {
+      this.mainScene.setAppActive(active);
+    }
+  }
+
   keypress(keycode) {
     super.keypress(keycode);
 

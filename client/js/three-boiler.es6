@@ -34,6 +34,14 @@ export class ThreeBoiler {
     this.resize();
 
     $('body').keypress((ev) => {this.keypress(ev.which);});
+
+    this.setAppActive(true);
+    $(window).blur(() => {
+      this.setAppActive(false);
+    });
+    $(window).focus(() => {
+      this.setAppActive(true);
+    });
   }
 
   createScene() {
@@ -70,6 +78,10 @@ export class ThreeBoiler {
 
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
+  }
+
+  setAppActive(active) {
+    this.appIsActive = active;
   }
 
   fadeSceneOverlay(behavior, options) {

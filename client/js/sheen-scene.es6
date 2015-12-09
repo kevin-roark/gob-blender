@@ -17,10 +17,15 @@ export class SheenScene {
     $(window).resize(this.resize.bind(this));
 
     this.hasStarted = false;
+    this.appIsActive = true;
   }
 
   update() {
 
+  }
+
+  setAppActive(active) {
+    this.appIsActive = active;
   }
 
   startScene() {
@@ -78,7 +83,7 @@ export class SheenScene {
   }
 
   keypress() {
-    
+
   }
 
   /// Protected overrides

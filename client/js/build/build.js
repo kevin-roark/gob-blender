@@ -3084,7 +3084,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
           }
         }, this.pushDelay);
 
-        if (this.useMeshes) {
+        if (this.useMeshes && this.appIsActive) {
           this.addTweetMesh(tweetData);
         }
       }
@@ -3605,6 +3605,15 @@ var Sheen = (function (_ThreeBoiler) {
         this.mainScene.update(this.clock.getDelta());
       }
     },
+    setAppActive: {
+      value: function setAppActive(active) {
+        _get(Object.getPrototypeOf(Sheen.prototype), "setAppActive", this).call(this, active);
+
+        if (this.mainScene) {
+          this.mainScene.setAppActive(active);
+        }
+      }
+    },
     keypress: {
       value: function keypress(keycode) {
         _get(Object.getPrototypeOf(Sheen.prototype), "keypress", this).call(this, keycode);
@@ -3716,11 +3725,17 @@ var SheenScene = exports.SheenScene = (function () {
     $(window).resize(this.resize.bind(this));
 
     this.hasStarted = false;
+    this.appIsActive = true;
   }
 
   _createClass(SheenScene, {
     update: {
       value: function update() {}
+    },
+    setAppActive: {
+      value: function setAppActive(active) {
+        this.appIsActive = active;
+      }
     },
     startScene: {
       value: function startScene() {
@@ -3923,6 +3938,14 @@ var ThreeBoiler = exports.ThreeBoiler = (function () {
     $("body").keypress(function (ev) {
       _this.keypress(ev.which);
     });
+
+    this.setAppActive(true);
+    $(window).blur(function () {
+      _this.setAppActive(false);
+    });
+    $(window).focus(function () {
+      _this.setAppActive(true);
+    });
   }
 
   _createClass(ThreeBoiler, {
@@ -3970,6 +3993,11 @@ var ThreeBoiler = exports.ThreeBoiler = (function () {
 
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
+      }
+    },
+    setAppActive: {
+      value: function setAppActive(active) {
+        this.appIsActive = active;
       }
     },
     fadeSceneOverlay: {
