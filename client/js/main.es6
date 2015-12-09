@@ -127,13 +127,24 @@ class Sheen extends ThreeBoiler {
     super.keypress(keycode);
 
     switch (keycode) {
-      case 113: /* q */
+      case 38:  /* up */
+      case 119: /* w */
+        this.mainScene.zoomIn();
         break;
 
-      case 114: /* r */
+      case 40:  /* down */
+      case 115: /* s */
+      this.mainScene.zoomOut();
         break;
 
-      case 112: /* p */
+      case 37:  /* left */
+      case 97: /* a */
+      this.mainScene.rotateLeft();
+        break;
+
+      case 39:  /* right */
+      case 100: /* d */
+      this.mainScene.rotateRight();
         break;
     }
   }

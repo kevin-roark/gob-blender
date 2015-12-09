@@ -26,7 +26,7 @@ export class MainScene extends SheenScene {
     this.useSkysphere = true;
     this.skyboxNum = 1;
     this.skysphereNum = 9;
-    this.useMeshImages = true;
+    this.useMeshImages = false;
     this.useSentimentColor = true;
     this.useRandomColor = false;
     this.usePercussion = true;
@@ -34,7 +34,11 @@ export class MainScene extends SheenScene {
     this.useSynth = true;
     this.soundOn = true;
     this.pushDelay = 5000;
-    this.useMeshes = false;
+    this.useMeshes = true;
+
+    this.zoomIncrement = 1;
+    this.cameraRotationIncrement = 0.002;
+    this.rotateCamera = true;
 
     this.cameraRotationAngle = 0;
     this.raycaster = new THREE.Raycaster();
@@ -205,7 +209,9 @@ export class MainScene extends SheenScene {
   update(dt) {
     super.update(dt);
 
-    this.cameraRotationAngle += 0.002;
+    if (this.rotateCamera){
+      this.cameraRotationAngle += this.cameraRotationIncrement; //0.002;
+    }
 
     this.camera.position.x = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
     this.camera.position.y = SCENE_RADIUS * Math.sin(this.cameraRotationAngle);
@@ -220,9 +226,45 @@ export class MainScene extends SheenScene {
   }
 
   // Interaction
+  zoomIn() {
+    if (SCENE_RADIUS > 1){
+      SCENE_RADIUS -= this.zoomIncrement;
+    }
+    console.log(SCENE_RADIUS);
+  }
 
-  spacebarPressed() {
+  zoomOut() {
+    if (SCENE_RADIUS < 250){
+      SCENE_RADIUS += this.zoomIncrement;
+    }
+  }
 
+  rotateLeft(){
+    if (this.rotateCamera){
+      if (this.cameraRotationIncrement > 0.0002){
+        this.cameraRotationIncrement -= 0.0001;
+      }
+    }
+    else{
+      this.cameraRotationAngle -= this.cameraRotationIncrement * 6;
+    }
+    console.log(this.cameraRotationIncrement);
+  }
+
+  rotateRight(){
+    if (this.rotateCamera){
+      if (this.cameraRotationIncrement < 0.01){
+        this.cameraRotationIncrement += 0.0001;
+      }
+    }
+    else{
+      this.cameraRotationAngle += this.cameraRotationIncrement * 6;
+    }
+    console.log(this.cameraRotationIncrement);
+  }
+
+  spacebarPressed(){
+    this.rotateCamera = !this.rotateCamera;
   }
 
   move(ev) {
@@ -520,7 +562,7 @@ export class MainScene extends SheenScene {
       holdSound.play();
     }
     var holdDelay = 3000 + Math.random()*Math.random()*10000;
-    console.log(holdDelay);
+    //console.log(holdDelay);
     setTimeout(() => { this.makeHoldNotes(); }, holdDelay);
   }
 
@@ -534,7 +576,7 @@ export class MainScene extends SheenScene {
       holdSound.play();
     }
     var holdDelay = 3000 + Math.random()*Math.random()*20000;
-    console.log(holdDelay);
+    //console.log(holdDelay);
     setTimeout(() => { this.makeHoldNotes2(); }, holdDelay);
   }
 
