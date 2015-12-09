@@ -33,8 +33,9 @@ export class MainScene extends SheenScene {
     this.meshColorStyle = 'sentiment';
     this.usePercussion = true;
     this.useInstruments = true;
-    this.useSynth = true;
+    this.useSynth = false;
     this.soundOn = true;
+    this.tweetPaused = false;
 
     // mutable key-controlled variables
     this.rotationRadius = 100;
@@ -408,7 +409,13 @@ export class MainScene extends SheenScene {
   }
 
   spacebarPressed(){
-    this.rotateCamera = !this.rotateCamera;
+    if (!this.useMeshes){
+      this.tweetPaused = !this.tweetPaused;
+    }
+    else {
+      this.rotateCamera = !this.rotateCamera;
+    }
+
   }
 
   keypress(keycode) {
@@ -577,7 +584,10 @@ export class MainScene extends SheenScene {
 
   handleNewTweet(tweetData) {
     setTimeout(() => {
-      this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
+
+      if (!this.tweetPaused){
+        this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
+      }
 
       this.totalSentiment += tweetData.sentiment;
       this.totalSentimentElement.innerText = this.totalSentiment;
