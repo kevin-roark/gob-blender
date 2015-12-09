@@ -27,7 +27,9 @@ export class MainScene extends SheenScene {
     this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 9};
 
     // mutable config variables
-    this.useMeshImages = false;
+    this.skymeshVisible = true;
+    this.dataVisible = true;
+    this.useMeshImages = true;
     this.meshColorStyle = 'sentiment';
     this.usePercussion = true;
     this.useInstruments = true;
@@ -66,10 +68,129 @@ export class MainScene extends SheenScene {
       addClass('.tweet-ticker', 'nomesh');
       addClass('.ticker-tweet-text', 'nomesh');
       addClass('.stat-hud', 'nomesh');
+      addClass('#control-hud-sky-data-section', 'hidden');
+      addClass('#control-hud-mesh-section', 'hidden');
     }
+
+    this.setupControlHud();
 
     this.setupSkyWithStyle(this.skyStyle);
 
+    this.setupSound();
+
+    this.socket = io('http://104.131.72.3:3201');
+    this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
+  }
+
+  setupControlHud() {
+    var setupToggleClickHandler = (el, propertyName, callback) => {
+      el.addEventListener('click', () => {
+        el.classList.toggle('active');
+        this[propertyName] = !this[propertyName];
+        if (callback) {
+          callback();
+        }
+      }, false);
+    };
+
+    var setupOptionsClickHandler = (el, propertyName, propertyOptions, displayOptions, callback) => {
+      el.addEventListener('click', () => {
+        var currentDisplayOption = el.innerText;
+        var currentOptionIndex = displayOptions.indexOf(currentDisplayOption);
+        if (currentOptionIndex === -1) currentOptionIndex = 0;
+        var nextOptionIndex = currentOptionIndex < propertyOptions.length - 1 ? currentOptionIndex + 1 : 0;
+
+        el.innerText = displayOptions[nextOptionIndex];
+        this[propertyName] = propertyOptions[nextOptionIndex];
+
+        if (callback) {
+          callback();
+        }
+      }, false);
+    };
+
+    // data options
+    setupToggleClickHandler(document.querySelector('#skybox-toggle'), 'skymeshVisible', () => {
+      this.skymesh.visible = this.skymeshVisible;
+
+      if (this.skymeshVisible) {
+        removeClass('.ticker-tweet-text', 'light-background');
+        removeClass('.stat-hud', 'light-background');
+      }
+      else {
+        addClass('.ticker-tweet-text', 'light-background');
+        addClass('.stat-hud', 'light-background');
+      }
+    });
+    setupToggleClickHandler(document.querySelector('#data-toggle'), 'dataVisible', () => {
+      if (this.dataVisible) {
+        removeClass('.ticker-tweet-text', 'hidden');
+        removeClass('.stat-hud', 'hidden');
+      }
+      else {
+        addClass('.ticker-tweet-text', 'hidden');
+        addClass('.stat-hud', 'hidden');
+      }
+    });
+
+    // mesh options
+    setupOptionsClickHandler(document.querySelector('#mesh-color-options'),
+                            'meshColorStyle',
+                            ['sentiment', 'random', 'none'],
+                            ['sentiment colors', 'random colors', 'no colors'],
+                          () => {
+                            for (var i = 0; i < this.tweetMeshes.length; i++) {
+                              var mesh = this.tweetMeshes[i];
+                              mesh.material.color = this.colorForTweetData(mesh.__tweetData);
+                            }
+                          });
+    setupToggleClickHandler(document.querySelector('#mesh-images-toggle'), 'useMeshImages');
+
+    // sound options
+    setupToggleClickHandler(document.querySelector('#sound-toggle'), 'soundOn', () => {
+      for (var key in this.sounds) {
+        if (this.sounds.hasOwnProperty(key)) {
+          var sound = this.sounds[key];
+          if (this.soundOn) {
+            sound.unmute();
+          }
+          else {
+            sound.mute();
+          }
+        }
+      }
+    });
+    setupToggleClickHandler(document.querySelector('#instruments-toggle'), 'useInstruments');
+    setupToggleClickHandler(document.querySelector('#percussion-toggle'), 'usePercussion');
+    setupToggleClickHandler(document.querySelector('#synth-toggle'), 'useSynth');
+  }
+
+  setupSkyWithStyle(style) {
+    if (style.type === 'box') {
+      var imagePrefix = "media/textures/skybox" + style.number + "/";
+      var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
+      var imageSuffix = ".jpg";
+      var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
+
+      var materialArray = [];
+      for (var i = 0; i < 6; i++)
+        materialArray.push( new THREE.MeshBasicMaterial({
+          map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
+          side: THREE.BackSide
+        }));
+      var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
+      this.skymesh = new THREE.Mesh( skyGeometry, skyMaterial );
+      this.scene.add(this.skymesh);
+    }
+    else {
+      var skytexture = THREE.ImageUtils.loadTexture( 'media/textures/360sky/360sky' + style.number + ".jpg", THREE.UVMapping);
+      this.skymesh = new THREE.Mesh( new THREE.SphereGeometry( 500, 60, 40 ), new THREE.MeshBasicMaterial( { map: skytexture } ) );
+      this.skymesh.scale.x = -1;
+      this.scene.add(this.skymesh);
+    }
+  }
+
+  setupSound() {
     this.sounds = {};
     this.synthVolume = -8;
     this.panner = new Tone.Panner().toMaster();
@@ -100,7 +221,7 @@ export class MainScene extends SheenScene {
     this.panner.pan.value = 0.5;
     this.sineSynth.volume.value = this.triSynth.volume.value = this.synthVolume;
 
-    var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8','background1', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
+    var soundFilenames = ['altglock1','altglock2','altglock3','altglock4','altglock5','altglock6','altglock7','altglock8','badmallet1','badmallet2','badmallet3','badmallet4','badmallet5','badmallet6','badmallet7','badmallet8', 'background1loud', 'bell1', 'bell2', 'bell3', 'bell4','clouds1','clouds2','clouds3','clouds4','clouds5','clouds6','clouds7','clouds8','dbass1','dbass2','dbass3','dbass4','dbass5','dbass6','dbass7','dbass8', 'glock1', 'glock2', 'glock3', 'glock4', 'glock5', 'glock6', 'glock7', 'glock8', 'glock9', 'glock10', 'glock11', 'glock12', 'glock13', 'mallet1', 'mallet2', 'mallet3', 'mallet4', 'mallet5', 'mallet6', 'mallet7', 'mallet8', 'tile1', 'tile2', 'tile3', 'tile4', 'tile5', 'tile6', 'tile7', 'tile8'];
     soundFilenames.forEach((filename) => {
       var sound = new buzz.sound('/media/sound/instruments/' + filename, {
         formats: ['mp3', 'ogg'],
@@ -139,40 +260,10 @@ export class MainScene extends SheenScene {
 
     this.sounds.background1loud.setVolume(70);
     this.sounds.background1loud.setTime(0);
+    this.sounds.background1loud.play();
 
-    if (this.soundOn) {
-      this.sounds.background1loud.play();
-      this.makeHoldNotes();
-      this.makeHoldNotes2();
-    }
-
-    this.socket = io('http://104.131.72.3:3201');
-    this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
-  }
-
-  setupSkyWithStyle(style) {
-    if (style.type === 'box') {
-      var imagePrefix = "media/textures/skybox" + style.number + "/";
-      var directions  = ["px", "nx", "py", "ny", "pz", "nz"];
-      var imageSuffix = ".jpg";
-      var skyGeometry = new THREE.CubeGeometry(1000, 1000, 1000);
-
-      var materialArray = [];
-      for (var i = 0; i < 6; i++)
-        materialArray.push( new THREE.MeshBasicMaterial({
-          map: THREE.ImageUtils.loadTexture( imagePrefix + directions[i] + imageSuffix ),
-          side: THREE.BackSide
-        }));
-      var skyMaterial = new THREE.MeshFaceMaterial( materialArray );
-      var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
-      this.scene.add(skyBox);
-    }
-    else {
-      var skytexture = THREE.ImageUtils.loadTexture( 'media/textures/360sky/360sky' + style.number + ".jpg", THREE.UVMapping);
-      var skymesh = new THREE.Mesh( new THREE.SphereGeometry( 500, 60, 40 ), new THREE.MeshBasicMaterial( { map: skytexture } ) );
-      skymesh.scale.x = -1;
-      this.scene.add(skymesh);
-    }
+    this.makeHoldNotes(10000);
+    this.makeHoldNotes(20000);
   }
 
   /// Overrides
@@ -457,7 +548,7 @@ export class MainScene extends SheenScene {
     var mesh = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
       new THREE.MeshLambertMaterial({
-        color: this.colorForSentiment(tweetData.sentiment)
+        color: this.colorForTweetData(tweetData)
       })
     );
 
@@ -534,7 +625,8 @@ export class MainScene extends SheenScene {
     }
   }
 
-  colorForSentiment(score) {
+  colorForTweetData(tweetData) {
+    var score = tweetData.sentiment;
     var color = new THREE.Color(0xffffff);
 
     switch (this.meshColorStyle) {
@@ -563,30 +655,18 @@ export class MainScene extends SheenScene {
     }
   }
 
-  makeHoldNotes() {
+  makeHoldNotes(maxHoldDelay) {
     var sounds = this.sounds;
-    var holdSoundArray = [];
-    holdSoundArray = [sounds.A,sounds.C,sounds.C2,sounds.D,sounds.E,sounds.F,sounds.G];
+    var holdSoundArray = [sounds.A,sounds.C,sounds.C2,sounds.D,sounds.E,sounds.F,sounds.G];
     var holdSound = kt.choice(holdSoundArray);
     if (holdSound.isPaused() || holdSound.getTime() > 0.2) {
       holdSound.setTime(0);
       holdSound.play();
     }
-    var holdDelay = 3000 + Math.random()*Math.random()*10000;
-    setTimeout(this.makeHoldNotes.bind(this), holdDelay);
-  }
-
-  makeHoldNotes2 (){
-    var sounds = this.sounds;
-    var holdSoundArray = [];
-    holdSoundArray = [sounds.A,sounds.C,sounds.C2,sounds.D,sounds.E,sounds.F,sounds.G];
-    var holdSound = kt.choice(holdSoundArray);
-    if (holdSound.isPaused() || holdSound.getTime() > 0.2) {
-      holdSound.setTime(0);
-      holdSound.play();
-    }
-    var holdDelay = 3000 + Math.random()*Math.random()*20000;
-    setTimeout(this.makeHoldNotes2.bind(this), holdDelay);
+    var holdDelay = 3000 + Math.random() * Math.random() * maxHoldDelay;
+    setTimeout(() => {
+      this.makeHoldNotes(maxHoldDelay);
+    }, holdDelay);
   }
 
   makeGodSound(score) {
@@ -805,5 +885,12 @@ function addClass(selector, name) {
   var els = document.querySelectorAll(selector);
   for (var i = 0; i < els.length; i++) {
     els[i].classList.add(name);
+  }
+}
+
+function removeClass(selector, name) {
+  var els = document.querySelectorAll(selector);
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.remove(name);
   }
 }

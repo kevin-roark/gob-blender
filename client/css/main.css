@@ -31,6 +31,10 @@ a {
     font-style: italic;
   }
 
+.hidden {
+  display: none;
+}
+
 #mobile-error-overlay {
   display: none;
   position: fixed; top: 0; left: 0; bottom: 0; right: 0; z-index: 2000; overflow-y: auto;
@@ -120,6 +124,9 @@ a {
     .ticker-tweet-text.nomesh {
       font-size: 30px;
     }
+    .ticker-tweet-text.light-background {
+      color: rgba(0, 0, 0, 0.87);
+    }
 
 .stat-hud {
   position: fixed; right: 5px; bottom: 5px; max-width: 50%;
@@ -142,3 +149,35 @@ a {
     font-size: 25px;
     max-width: 100%;
   }
+  .stat-hud.light-background {
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+.control-hud {
+  position: fixed; top: 0; right: 0;
+  user-select: none;
+}
+  .control-hud-element {
+    display: inline-block;
+    margin: 5px;
+    font-family: monospace; font-size: 12px;
+    user-select: none;
+  }
+    .control-hud-section-divider {
+      height: 15px; width: 1px; margin: 5px 5px -5px 5px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    .control-hud-toggle {
+      cursor: pointer;
+      text-decoration: none;
+      color: rgba(0, 0, 0, 0.5);
+    }
+      .control-hud-toggle.active {
+        text-decoration: underline;
+        color: rgba(0, 0, 0, 0.95);
+      }
+    .control-hud-options {
+      cursor: pointer;
+      text-decoration: underline;
+      color: rgba(0, 0, 0, 0.95);
+    }
