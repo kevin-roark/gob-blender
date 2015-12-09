@@ -2590,8 +2590,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.meshColorStyle = "sentiment";
     this.usePercussion = true;
     this.useInstruments = true;
-    this.useSynth = true;
+    this.useSynth = false;
     this.soundOn = true;
+    this.tweetPaused = false;
 
     // mutable key-controlled variables
     this.rotationRadius = 100;
@@ -2971,7 +2972,11 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     },
     spacebarPressed: {
       value: function spacebarPressed() {
-        this.rotateCamera = !this.rotateCamera;
+        if (!this.useMeshes) {
+          this.tweetPaused = !this.tweetPaused;
+        } else {
+          this.rotateCamera = !this.rotateCamera;
+        }
       }
     },
     keypress: {
@@ -3160,7 +3165,10 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         var _this = this;
 
         setTimeout(function () {
-          _this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
+
+          if (!_this.tweetPaused) {
+            _this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
+          }
 
           _this.totalSentiment += tweetData.sentiment;
           _this.totalSentimentElement.innerText = _this.totalSentiment;
