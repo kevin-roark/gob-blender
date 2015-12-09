@@ -167,7 +167,7 @@ a {
   .control-hud-element {
     display: inline-block;
     margin: 5px;
-    font-family: monospace; font-size: 12px;
+    font-family: monospace; font-size: 17px;
     user-select: none;
   }
     .control-hud-section-divider {

@@ -23,7 +23,7 @@ export class MainScene extends SheenScene {
     this.onPhone = options.onPhone || false;
     this.pushDelay = options.pushDelay || 5000;
     this.maxMeshCount = options.maxMeshCount || 100;
-    this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 9};
+    this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 11};
 
     // mutable config variables
     this.controlHudVisible = false;
@@ -76,15 +76,30 @@ export class MainScene extends SheenScene {
 
     this.useMeshes = !inSimpleMode;
 
-    if (!this.useMeshes) {
+    this.updateForUseMeshes();
+
+    this.socket = io('http://104.131.72.3:3201');
+    this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
+  }
+
+  updateForUseMeshes() {
+    if (this.useMeshes) {
+      removeClass('.tweet-ticker', 'nomesh');
+      removeClass('.ticker-tweet-text', 'nomesh');
+      removeClass('.stat-hud', 'nomesh');
+      removeClass('#control-hud-mesh-section', 'hidden');
+    }
+    else {
       addClass('.tweet-ticker', 'nomesh');
       addClass('.ticker-tweet-text', 'nomesh');
       addClass('.stat-hud', 'nomesh');
       addClass('#control-hud-mesh-section', 'hidden');
     }
 
-    this.socket = io('http://104.131.72.3:3201');
-    this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
+    for (var i = 0; i < this.tweetMeshes.length; i++) {
+      var mesh = this.tweetMeshes[i];
+      mesh.visible = this.useMeshes;
+    }
   }
 
   setupControlHud() {
@@ -122,6 +137,11 @@ export class MainScene extends SheenScene {
       else {
         addClass('#control-hud-options', 'hidden');
       }
+    });
+
+    // 3D
+    setupToggleClickHandler(document.querySelector('#mesh-toggle'), 'useMeshes',  () => {
+      this.updateForUseMeshes();
     });
 
     // data options
@@ -273,7 +293,7 @@ export class MainScene extends SheenScene {
 
     this.sounds.background1loud.setVolume(70);
     this.sounds.background1loud.setTime(0);
-    this.sounds.background1loud.play();
+    this.sounds.background1loud.loop().play();
 
     this.makeHoldNotes(10000);
     this.makeHoldNotes(20000);
@@ -520,7 +540,7 @@ export class MainScene extends SheenScene {
       }
     }, this.pushDelay);
 
-    if (this.useMeshes && this.appIsActive) {
+    if (this.useMeshes) {
       this.addTweetMesh(tweetData);
     }
   }
@@ -577,12 +597,22 @@ export class MainScene extends SheenScene {
     mesh.position.copy(this.randomTweetMeshPosition());
 
     var scale = {value: 0.05};
+    var targetScale = {value: Math.random() * 2 + (tweetData.tweet.text.length / 40)};
     var updateMeshScale = () => { mesh.scale.set(scale.value, scale.value, scale.value); };
     updateMeshScale();
-    var meshTween = new TWEEN.Tween(scale).to({value: Math.random() * 2 + (tweetData.tweet.text.length / 40)}, 500);
-    meshTween.onUpdate(updateMeshScale);
-    meshTween.easing(TWEEN.Easing.Circular.Out);
-    setTimeout(() => { meshTween.start(); }, this.pushDelay);
+
+    setTimeout(() => {
+      if (this.appIsActive) {
+        var meshTween = new TWEEN.Tween(scale).to(targetScale, 500);
+        meshTween.onUpdate(updateMeshScale);
+        meshTween.easing(TWEEN.Easing.Circular.Out);
+        meshTween.start();
+      }
+      else {
+        scale.value = targetScale.value;
+        updateMeshScale();
+      }
+    }, this.pushDelay);
 
     this.scene.add(mesh);
     this.tweetMeshes.push(mesh);
