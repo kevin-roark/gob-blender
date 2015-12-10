@@ -29,7 +29,7 @@ var godStream = twitterClient.stream('statuses/filter', {
   language: 'en'
 });
 
-var MAX_THROUGHPUT_PER_SECOND = 6;
+var MAX_THROUGHPUT_PER_SECOND = 4;
 var tweetsSentThisSecond = 0;
 setInterval(function resetThroughput() {
   tweetsSentThisSecond = 0;

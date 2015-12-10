@@ -10,7 +10,7 @@ var nlp = require("nlp_compromise");
 import {SheenScene} from './sheen-scene.es6';
 import {WordTracker} from './word-tracker.es6';
 
-var TWEETS_PER_SECOND = 6;
+var TWEETS_PER_SECOND = 4;
 
 export class MainScene extends SheenScene {
 
