@@ -11,8 +11,8 @@ export class WordTracker {
 
   track(words) {
     for (var i = 0; i < words.length; i++) {
-      var word = words[i].replace(/\s/g, '');
-      if (word.length === 0 || this.bannedWords.indexOf(word.toLowerCase()) >= 0) {
+      var word = words[i].replace(/\s/g, '').toLowerCase();
+      if (word.length === 0 || this.bannedWords.indexOf(word) >= 0) {
         continue;
       }
 

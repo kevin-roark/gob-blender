@@ -53,7 +53,6 @@ a {
     font-size: 26px; margin-bottom: 20px;
 
     -webkit-transition: all 250ms;
-    -moz-transition: all 250ms;
     transition: all 250ms;
   }
   .splash-warning {
@@ -75,13 +74,13 @@ a {
     .click-to-start-button {
       cursor: pointer;
       -webkit-transition: all 250ms;
-      -moz-transition: all 250ms;
       transition: all 250ms;
     }
       .click-to-start-button:hover,.click-to-start-button:focus {
         font-style: italic;
         -webkit-transform: scale(1.05);
-        transform: scale(1.05);
+        -ms-transform: scale(1.05);
+            transform: scale(1.05);
       }
     #click-to-start {
       margin: 30px 0px 40px 0px;
@@ -105,7 +104,7 @@ a {
 
 .detail-tweet-text {
   opacity: 0.0;
-  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  position: fixed; top: 50%; left: 50%; -webkit-transform: translate(-50%, -50%); -ms-transform: translate(-50%, -50%); transform: translate(-50%, -50%);
   padding: 10px; max-width: 300px;
   color: rgba(0, 0, 0, 0.87); background-color: #fefefe;
   font-size: 28px; font-family: 'Times New Roman', serif;
@@ -119,11 +118,19 @@ a {
   padding: 5px;
 }
   .ticker-tweet-text {
-    margin-top: 2px;
+    margin-top: 5px;
     font-family: 'Helvetica', sans-serif; font-size: 18px;
     color: rgba(255, 255, 255, 0.87);
     text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
   }
+    #god-adjective {
+      font-style: italic;
+      text-shadow: 1px 1px 8px rgba(43, 255, 0, 0.4);
+    }
+    #god-verb {
+      font-style: italic;
+      text-shadow: 1px 1px 8px rgba(0, 148, 255, 0.4);
+    }
 
   .tweet-ticker.nomesh {
     left: 25%; bottom: 60%; max-width: 50%;
@@ -137,13 +144,16 @@ a {
 
 .stat-hud {
   position: fixed; right: 5px; bottom: 5px; max-width: 50%;
-  font-family: monospace; font-size: 18px;
+  font-family: monospace; font-size: 17px;
   color: rgba(255, 255, 255, 0.87);
   text-align: right;
 }
   .stat-hud p {
     margin: 0; padding: 0;
     text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
+  }
+  .stat-point {
+    font-weight: bold;
   }
   #good-tweet-count, #total-sentiment {
     color: rgb(46, 238, 135);
@@ -162,13 +172,19 @@ a {
 
 .control-hud {
   position: fixed; top: 0; right: 0;
-  user-select: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
 }
   .control-hud-element {
     display: inline-block;
     margin: 5px;
     font-family: monospace; font-size: 17px;
-    user-select: none;
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
   }
     .control-hud-section-divider {
       height: 15px; width: 1px; margin: 5px 5px -5px 5px;
