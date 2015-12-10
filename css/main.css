@@ -119,14 +119,14 @@ a {
   padding: 5px;
 }
   .ticker-tweet-text {
-    margin-top: 2px;
+    margin-top: 5px;
     font-family: 'Helvetica', sans-serif; font-size: 18px;
     color: rgba(255, 255, 255, 0.87);
     text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
   }
     #god-adjective {
       font-style: italic;
-      text-shadow: 1px 1px 8px rgba(255, 252, 0, 0.4);
+      text-shadow: 1px 1px 8px rgba(43, 255, 0, 0.4);
     }
     #god-verb {
       font-style: italic;
@@ -145,13 +145,16 @@ a {
 
 .stat-hud {
   position: fixed; right: 5px; bottom: 5px; max-width: 50%;
-  font-family: monospace; font-size: 18px;
+  font-family: monospace; font-size: 17px;
   color: rgba(255, 255, 255, 0.87);
   text-align: right;
 }
   .stat-hud p {
     margin: 0; padding: 0;
     text-shadow: 1px 1px 1px rgba(0,0,0,0.23);
+  }
+  .stat-point {
+    font-weight: bold;
   }
   #good-tweet-count, #total-sentiment {
     color: rgb(46, 238, 135);
