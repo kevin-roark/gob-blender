@@ -2565,7 +2565,7 @@ var SheenScene = require("./sheen-scene.es6").SheenScene;
 
 var WordTracker = require("./word-tracker.es6").WordTracker;
 
-var TWEETS_PER_SECOND = 3;
+var TWEETS_PER_SECOND = 6;
 
 var MainScene = exports.MainScene = (function (_SheenScene) {
 
@@ -2590,7 +2590,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     this.meshColorStyle = "sentiment";
     this.usePercussion = true;
     this.useInstruments = true;
-    this.useSynth = false;
+    this.useSynth = true;
     this.soundOn = true;
     this.tweetPaused = false;
 
@@ -2646,7 +2646,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
         this.updateForUseMeshes();
 
-        this.socket = io("http://104.131.72.3:3201");
+        this.socket = io("localhost:6001"); //io('http://104.131.72.3:3201');
         this.socket.on("fresh-tweet", this.handleNewTweet.bind(this));
       }
     },
@@ -2729,8 +2729,10 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         setupToggleClickHandler(document.querySelector("#data-toggle"), "dataVisible", function () {
           if (_this.dataVisible) {
             removeClass(".stat-hud", "hidden");
+            removeClass(".tweet-ticker", "hidden");
           } else {
             addClass(".stat-hud", "hidden");
+            addClass(".tweet-ticker", "hidden");
           }
         });
 
@@ -3165,7 +3167,6 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
         var _this = this;
 
         setTimeout(function () {
-
           if (!_this.tweetPaused) {
             _this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
           }
@@ -3188,10 +3189,14 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
           }
         }, this.pushDelay);
 
-        if (this.useMeshes) {
-          this.addTweetMesh(tweetData);
-          this.tweetPaused = false;
-        }
+        var meshDelay = Math.random() * this.pushDelay;
+        if (Math.random() < 0.5) meshDelay *= Math.random();
+        setTimeout(function () {
+          if (_this.useMeshes) {
+            _this.addTweetMesh(tweetData, _this.pushDelay - meshDelay);
+            _this.tweetPaused = false;
+          }
+        }, meshDelay);
       }
     },
     processLanguage: {
@@ -3232,7 +3237,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
       }
     },
     addTweetMesh: {
-      value: function addTweetMesh(tweetData) {
+      value: function addTweetMesh(tweetData, tweenDelay) {
         var _this = this;
 
         var mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshLambertMaterial({
@@ -3265,7 +3270,7 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
             scale.value = targetScale.value;
             updateMeshScale();
           }
-        }, this.pushDelay);
+        }, tweenDelay);
 
         this.scene.add(mesh);
         this.tweetMeshes.push(mesh);

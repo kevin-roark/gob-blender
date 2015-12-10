@@ -25,11 +25,11 @@ var twitterClient = new Twit({
 });
 
 var godStream = twitterClient.stream('statuses/filter', {
-  track: ['god', 'allah', 'jehovah', 'yaweh', 'holy spirit'],
+  track: ['god', 'allah', 'jehovah', 'yahweh', 'holy spirit'],
   language: 'en'
 });
 
-var MAX_THROUGHPUT_PER_SECOND = 3;
+var MAX_THROUGHPUT_PER_SECOND = 6;
 var tweetsSentThisSecond = 0;
 setInterval(function resetThroughput() {
   tweetsSentThisSecond = 0;

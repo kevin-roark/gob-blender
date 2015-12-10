@@ -10,7 +10,7 @@ var nlp = require("nlp_compromise");
 import {SheenScene} from './sheen-scene.es6';
 import {WordTracker} from './word-tracker.es6';
 
-var TWEETS_PER_SECOND = 3;
+var TWEETS_PER_SECOND = 6;
 
 export class MainScene extends SheenScene {
 
@@ -33,7 +33,7 @@ export class MainScene extends SheenScene {
     this.meshColorStyle = 'sentiment';
     this.usePercussion = true;
     this.useInstruments = true;
-    this.useSynth = false;
+    this.useSynth = true;
     this.soundOn = true;
     this.tweetPaused = false;
 
@@ -85,7 +85,7 @@ export class MainScene extends SheenScene {
 
     this.updateForUseMeshes();
 
-    this.socket = io('http://104.131.72.3:3201');
+    this.socket = io('localhost:6001'); //io('http://104.131.72.3:3201');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
   }
 
@@ -167,9 +167,11 @@ export class MainScene extends SheenScene {
     setupToggleClickHandler(document.querySelector('#data-toggle'), 'dataVisible', () => {
       if (this.dataVisible) {
         removeClass('.stat-hud', 'hidden');
+        removeClass('.tweet-ticker', 'hidden');
       }
       else {
         addClass('.stat-hud', 'hidden');
+        addClass('.tweet-ticker', 'hidden');
       }
     });
 
@@ -409,7 +411,7 @@ export class MainScene extends SheenScene {
   }
 
   spacebarPressed(){
-    if (!this.useMeshes){
+    if (!this.useMeshes) {
       this.tweetPaused = !this.tweetPaused;
     }
     else {
@@ -584,8 +586,7 @@ export class MainScene extends SheenScene {
 
   handleNewTweet(tweetData) {
     setTimeout(() => {
-
-      if (!this.tweetPaused){
+      if (!this.tweetPaused) {
         this.tickerTweetTextElement.innerHTML = urlify(tweetData.tweet.text);
       }
 
@@ -608,10 +609,14 @@ export class MainScene extends SheenScene {
       }
     }, this.pushDelay);
 
-    if (this.useMeshes) {
-      this.addTweetMesh(tweetData);
-      this.tweetPaused = false;
-    }
+    var meshDelay = Math.random() * this.pushDelay;
+    if (Math.random() < 0.5) meshDelay *= Math.random();
+    setTimeout(() => {
+      if (this.useMeshes) {
+        this.addTweetMesh(tweetData, this.pushDelay - meshDelay);
+        this.tweetPaused = false;
+      }
+    }, meshDelay);
   }
 
   processLanguage(tweet) {
@@ -648,7 +653,7 @@ export class MainScene extends SheenScene {
     }
   }
 
-  addTweetMesh(tweetData) {
+  addTweetMesh(tweetData, tweenDelay) {
     var mesh = new THREE.Mesh(
       new THREE.SphereGeometry(1, 32, 32),
       new THREE.MeshLambertMaterial({
@@ -681,7 +686,7 @@ export class MainScene extends SheenScene {
         scale.value = targetScale.value;
         updateMeshScale();
       }
-    }, this.pushDelay);
+    }, tweenDelay);
 
     this.scene.add(mesh);
     this.tweetMeshes.push(mesh);
