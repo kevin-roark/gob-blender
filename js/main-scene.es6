@@ -21,7 +21,7 @@ export class MainScene extends SheenScene {
 
     // immutable config variables
     this.onPhone = options.onPhone || false;
-    this.pushDelay = options.pushDelay || 5000;
+    this.pushDelay = options.pushDelay || 3000;
     this.maxMeshCount = options.maxMeshCount || 100;
     this.skyStyle = options.skyStyle !== undefined ? options.skyStyle : {type: 'sphere', number: 11};
 
@@ -57,7 +57,7 @@ export class MainScene extends SheenScene {
     this.totalSentiment = 0;
 
     this.nounTracker = new WordTracker({bannedWords: ['god', 'rt']});
-    this.verbTracker = new WordTracker({bannedWords: ['is', 'rt']});
+    this.verbTracker = new WordTracker({bannedWords: ['is', 'rt', 'god']});
     this.adjectiveTracker = new WordTracker();
 
     this.detailTweetTextElement = document.querySelector('#detail-tweet-text');
@@ -224,6 +224,7 @@ export class MainScene extends SheenScene {
     }
     else {
       var skytexture = THREE.ImageUtils.loadTexture( 'media/textures/360sky/360sky' + style.number + ".jpg", THREE.UVMapping);
+      skytexture.minFilter = THREE.LinearFilter;
       this.skymesh = new THREE.Mesh( new THREE.SphereGeometry( 500, 60, 40 ), new THREE.MeshBasicMaterial( { map: skytexture } ) );
       this.skymesh.scale.x = -1;
       this.scene.add(this.skymesh);
@@ -340,12 +341,11 @@ export class MainScene extends SheenScene {
 
     if (this.rotateCamera) {
       this.cameraRotationAngle += this.cameraRotationIncrement; //0.002;
-
-      this.camera.position.x = this.rotationRadius * Math.sin(this.cameraRotationAngle);
-      this.camera.position.y = this.rotationRadius * Math.sin(this.cameraRotationAngle);
-      this.camera.position.z = this.rotationRadius * Math.cos(this.cameraRotationAngle);
     }
 
+    this.camera.position.x = this.rotationRadius * Math.sin(this.cameraRotationAngle);
+    this.camera.position.y = this.camera.position.x;
+    this.camera.position.z = this.rotationRadius * Math.cos(this.cameraRotationAngle);
     this.camera.lookAt(this.scene.position);
 
     if (this.detailedTweetMesh) {
