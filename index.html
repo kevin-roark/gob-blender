@@ -58,6 +58,14 @@
           <a target="_blank" href="http://www.rainonme.xyz">Rain in a Room</a>
         </div>
       </div>
+      <div class="social">
+        <div class="social-button twitter-button">
+          <a href="https://twitter.com/share" class="twitter-share-button" data-url="http://www.gods.website/" data-hashtags="carmichael">Tweet</a><script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+        </div>
+        <div class="social-button facebook-button">
+          <div class="fb-like" data-href="http://www.gods.website/" data-width="100" data-layout="button_count" data-action="like" data-show-faces="false" data-share="false"></div>
+        </div>
+      </div>
     </div>
 
     <div class="detail-tweet-text" id="detail-tweet-text"></div>
@@ -106,6 +114,15 @@
     </div>
 
     <!-- scripts -->
+    <div id="fb-root"></div>
+    <script>(function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s); js.id = id;
+      js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.5&appId=1456043177950397";
+      fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
+    </script>
     <script src="js/build/build.js"></script>
     <script>
       (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -115,7 +132,6 @@
 
       ga('create', 'UA-50868415-9', 'auto');
       ga('send', 'pageview');
-
     </script>
 </body>
 </html>
