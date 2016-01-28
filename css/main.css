@@ -94,6 +94,15 @@ a {
     text-align: right;
   }
 
+  .social {
+    position: absolute; top: 20px; right: 20px;
+    width: 100px;
+  }
+    .social-button {
+      padding: 10px;
+      text-align: center;
+    }
+
 .key-hint {
   display: none;
   position: absolute; bottom: 20px; right: 20px; padding: 20px; z-index: 1000000000;

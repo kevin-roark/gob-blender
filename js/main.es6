@@ -9,6 +9,8 @@ import {MainScene} from './main-scene.es6';
 
 let FlyControls = require('./controls/fly-controls');
 
+require('./social-evader')();
+
 var ON_PHONE = (/Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
 
 var BaseLoadingText = 'is loading';
