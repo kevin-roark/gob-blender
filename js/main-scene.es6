@@ -85,7 +85,7 @@ export class MainScene extends SheenScene {
 
     this.updateForUseMeshes();
 
-    this.socket = io('http://104.131.72.3:3201');
+    this.socket = io('185.21.216.190:6001');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
   }
 
