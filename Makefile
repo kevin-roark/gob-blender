@@ -6,8 +6,8 @@ watch:
 
 prod:
 	browserify js/main.es6 -t babelify --outfile js/build/build.js
-	minify js/build/build.js > js/build/build.min.js
-	minify css/main.css > css/main.min.css
+	uglifyjs js/build/build.js -o js/build/build.min.js
+	uglifycss css/main.css > css/main.min.css
 
 serve:
 	serve -p 8555 ./
