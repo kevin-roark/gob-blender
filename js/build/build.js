@@ -473,751 +473,6 @@ module.exports = function () {
 };
 
 },{}],3:[function(require,module,exports){
-// ----------------------------------------------------------------------------
-// Buzz, a Javascript HTML5 Audio library
-// v1.1.10 - Built 2015-04-20 13:05
-// Licensed under the MIT license.
-// http://buzz.jaysalvat.com/
-// ----------------------------------------------------------------------------
-// Copyright (C) 2010-2015 Jay Salvat
-// http://jaysalvat.com/
-// ----------------------------------------------------------------------------
-
-"use strict";
-
-(function (context, factory) {
-    "use strict";
-    if (typeof module !== "undefined" && module.exports) {
-        module.exports = factory();
-    } else if (typeof define === "function" && define.amd) {
-        define([], factory);
-    } else {
-        context.buzz = factory();
-    }
-})(undefined, function () {
-    "use strict";
-    var AudioContext = window.AudioContext || window.webkitAudioContext;
-    var buzz = {
-        defaults: {
-            autoplay: false,
-            duration: 5000,
-            formats: [],
-            loop: false,
-            placeholder: "--",
-            preload: "metadata",
-            volume: 80,
-            webAudioApi: false,
-            document: window.document
-        },
-        types: {
-            mp3: "audio/mpeg",
-            ogg: "audio/ogg",
-            wav: "audio/wav",
-            aac: "audio/aac",
-            m4a: "audio/x-m4a"
-        },
-        sounds: [],
-        el: document.createElement("audio"),
-        getAudioContext: function getAudioContext() {
-            if (this.audioCtx === undefined) {
-                try {
-                    this.audioCtx = AudioContext ? new AudioContext() : null;
-                } catch (e) {
-                    this.audioCtx = null;
-                }
-            }
-            return this.audioCtx;
-        },
-        sound: function sound(src, options) {
-            options = options || {};
-            var doc = options.document || buzz.defaults.document;
-            var pid = 0,
-                events = [],
-                eventsOnce = {},
-                supported = buzz.isSupported();
-            this.load = function () {
-                if (!supported) {
-                    return this;
-                }
-                this.sound.load();
-                return this;
-            };
-            this.play = function () {
-                if (!supported) {
-                    return this;
-                }
-                this.sound.play();
-                return this;
-            };
-            this.togglePlay = function () {
-                if (!supported) {
-                    return this;
-                }
-                if (this.sound.paused) {
-                    this.sound.play();
-                } else {
-                    this.sound.pause();
-                }
-                return this;
-            };
-            this.pause = function () {
-                if (!supported) {
-                    return this;
-                }
-                this.sound.pause();
-                return this;
-            };
-            this.isPaused = function () {
-                if (!supported) {
-                    return null;
-                }
-                return this.sound.paused;
-            };
-            this.stop = function () {
-                if (!supported) {
-                    return this;
-                }
-                this.setTime(0);
-                this.sound.pause();
-                return this;
-            };
-            this.isEnded = function () {
-                if (!supported) {
-                    return null;
-                }
-                return this.sound.ended;
-            };
-            this.loop = function () {
-                if (!supported) {
-                    return this;
-                }
-                this.sound.loop = "loop";
-                this.bind("ended.buzzloop", function () {
-                    this.currentTime = 0;
-                    this.play();
-                });
-                return this;
-            };
-            this.unloop = function () {
-                if (!supported) {
-                    return this;
-                }
-                this.sound.removeAttribute("loop");
-                this.unbind("ended.buzzloop");
-                return this;
-            };
-            this.mute = function () {
-                if (!supported) {
-                    return this;
-                }
-                this.sound.muted = true;
-                return this;
-            };
-            this.unmute = function () {
-                if (!supported) {
-                    return this;
-                }
-                this.sound.muted = false;
-                return this;
-            };
-            this.toggleMute = function () {
-                if (!supported) {
-                    return this;
-                }
-                this.sound.muted = !this.sound.muted;
-                return this;
-            };
-            this.isMuted = function () {
-                if (!supported) {
-                    return null;
-                }
-                return this.sound.muted;
-            };
-            this.setVolume = function (volume) {
-                if (!supported) {
-                    return this;
-                }
-                if (volume < 0) {
-                    volume = 0;
-                }
-                if (volume > 100) {
-                    volume = 100;
-                }
-                this.volume = volume;
-                this.sound.volume = volume / 100;
-                return this;
-            };
-            this.getVolume = function () {
-                if (!supported) {
-                    return this;
-                }
-                return this.volume;
-            };
-            this.increaseVolume = function (value) {
-                return this.setVolume(this.volume + (value || 1));
-            };
-            this.decreaseVolume = function (value) {
-                return this.setVolume(this.volume - (value || 1));
-            };
-            this.setTime = function (time) {
-                if (!supported) {
-                    return this;
-                }
-                var set = true;
-                this.whenReady(function () {
-                    if (set === true) {
-                        set = false;
-                        this.sound.currentTime = time;
-                    }
-                });
-                return this;
-            };
-            this.getTime = function () {
-                if (!supported) {
-                    return null;
-                }
-                var time = Math.round(this.sound.currentTime * 100) / 100;
-                return isNaN(time) ? buzz.defaults.placeholder : time;
-            };
-            this.setPercent = function (percent) {
-                if (!supported) {
-                    return this;
-                }
-                return this.setTime(buzz.fromPercent(percent, this.sound.duration));
-            };
-            this.getPercent = function () {
-                if (!supported) {
-                    return null;
-                }
-                var percent = Math.round(buzz.toPercent(this.sound.currentTime, this.sound.duration));
-                return isNaN(percent) ? buzz.defaults.placeholder : percent;
-            };
-            this.setSpeed = function (duration) {
-                if (!supported) {
-                    return this;
-                }
-                this.sound.playbackRate = duration;
-                return this;
-            };
-            this.getSpeed = function () {
-                if (!supported) {
-                    return null;
-                }
-                return this.sound.playbackRate;
-            };
-            this.getDuration = function () {
-                if (!supported) {
-                    return null;
-                }
-                var duration = Math.round(this.sound.duration * 100) / 100;
-                return isNaN(duration) ? buzz.defaults.placeholder : duration;
-            };
-            this.getPlayed = function () {
-                if (!supported) {
-                    return null;
-                }
-                return timerangeToArray(this.sound.played);
-            };
-            this.getBuffered = function () {
-                if (!supported) {
-                    return null;
-                }
-                return timerangeToArray(this.sound.buffered);
-            };
-            this.getSeekable = function () {
-                if (!supported) {
-                    return null;
-                }
-                return timerangeToArray(this.sound.seekable);
-            };
-            this.getErrorCode = function () {
-                if (supported && this.sound.error) {
-                    return this.sound.error.code;
-                }
-                return 0;
-            };
-            this.getErrorMessage = function () {
-                if (!supported) {
-                    return null;
-                }
-                switch (this.getErrorCode()) {
-                    case 1:
-                        return "MEDIA_ERR_ABORTED";
-
-                    case 2:
-                        return "MEDIA_ERR_NETWORK";
-
-                    case 3:
-                        return "MEDIA_ERR_DECODE";
-
-                    case 4:
-                        return "MEDIA_ERR_SRC_NOT_SUPPORTED";
-
-                    default:
-                        return null;
-                }
-            };
-            this.getStateCode = function () {
-                if (!supported) {
-                    return null;
-                }
-                return this.sound.readyState;
-            };
-            this.getStateMessage = function () {
-                if (!supported) {
-                    return null;
-                }
-                switch (this.getStateCode()) {
-                    case 0:
-                        return "HAVE_NOTHING";
-
-                    case 1:
-                        return "HAVE_METADATA";
-
-                    case 2:
-                        return "HAVE_CURRENT_DATA";
-
-                    case 3:
-                        return "HAVE_FUTURE_DATA";
-
-                    case 4:
-                        return "HAVE_ENOUGH_DATA";
-
-                    default:
-                        return null;
-                }
-            };
-            this.getNetworkStateCode = function () {
-                if (!supported) {
-                    return null;
-                }
-                return this.sound.networkState;
-            };
-            this.getNetworkStateMessage = function () {
-                if (!supported) {
-                    return null;
-                }
-                switch (this.getNetworkStateCode()) {
-                    case 0:
-                        return "NETWORK_EMPTY";
-
-                    case 1:
-                        return "NETWORK_IDLE";
-
-                    case 2:
-                        return "NETWORK_LOADING";
-
-                    case 3:
-                        return "NETWORK_NO_SOURCE";
-
-                    default:
-                        return null;
-                }
-            };
-            this.set = function (key, value) {
-                if (!supported) {
-                    return this;
-                }
-                this.sound[key] = value;
-                return this;
-            };
-            this.get = function (key) {
-                if (!supported) {
-                    return null;
-                }
-                return key ? this.sound[key] : this.sound;
-            };
-            this.bind = function (types, func) {
-                if (!supported) {
-                    return this;
-                }
-                types = types.split(" ");
-                var self = this,
-                    efunc = function efunc(e) {
-                    func.call(self, e);
-                };
-                for (var t = 0; t < types.length; t++) {
-                    var type = types[t],
-                        idx = type;
-                    type = idx.split(".")[0];
-                    events.push({
-                        idx: idx,
-                        func: efunc
-                    });
-                    this.sound.addEventListener(type, efunc, true);
-                }
-                return this;
-            };
-            this.unbind = function (types) {
-                if (!supported) {
-                    return this;
-                }
-                types = types.split(" ");
-                for (var t = 0; t < types.length; t++) {
-                    var idx = types[t],
-                        type = idx.split(".")[0];
-                    for (var i = 0; i < events.length; i++) {
-                        var namespace = events[i].idx.split(".");
-                        if (events[i].idx === idx || namespace[1] && namespace[1] === idx.replace(".", "")) {
-                            this.sound.removeEventListener(type, events[i].func, true);
-                            events.splice(i, 1);
-                        }
-                    }
-                }
-                return this;
-            };
-            this.bindOnce = function (type, func) {
-                if (!supported) {
-                    return this;
-                }
-                var self = this;
-                eventsOnce[pid++] = false;
-                this.bind(type + "." + pid, function () {
-                    if (!eventsOnce[pid]) {
-                        eventsOnce[pid] = true;
-                        func.call(self);
-                    }
-                    self.unbind(type + "." + pid);
-                });
-                return this;
-            };
-            this.trigger = function (types, detail) {
-                if (!supported) {
-                    return this;
-                }
-                types = types.split(" ");
-                for (var t = 0; t < types.length; t++) {
-                    var idx = types[t];
-                    for (var i = 0; i < events.length; i++) {
-                        var eventType = events[i].idx.split(".");
-                        if (events[i].idx === idx || eventType[0] && eventType[0] === idx.replace(".", "")) {
-                            var evt = doc.createEvent("HTMLEvents");
-                            evt.initEvent(eventType[0], false, true);
-                            evt.originalEvent = detail;
-                            this.sound.dispatchEvent(evt);
-                        }
-                    }
-                }
-                return this;
-            };
-            this.fadeTo = function (to, duration, callback) {
-                if (!supported) {
-                    return this;
-                }
-                if (duration instanceof Function) {
-                    callback = duration;
-                    duration = buzz.defaults.duration;
-                } else {
-                    duration = duration || buzz.defaults.duration;
-                }
-                var from = this.volume,
-                    delay = duration / Math.abs(from - to),
-                    self = this;
-                this.play();
-                function doFade() {
-                    setTimeout(function () {
-                        if (from < to && self.volume < to) {
-                            self.setVolume(self.volume += 1);
-                            doFade();
-                        } else if (from > to && self.volume > to) {
-                            self.setVolume(self.volume -= 1);
-                            doFade();
-                        } else if (callback instanceof Function) {
-                            callback.apply(self);
-                        }
-                    }, delay);
-                }
-                this.whenReady(function () {
-                    doFade();
-                });
-                return this;
-            };
-            this.fadeIn = function (duration, callback) {
-                if (!supported) {
-                    return this;
-                }
-                return this.setVolume(0).fadeTo(100, duration, callback);
-            };
-            this.fadeOut = function (duration, callback) {
-                if (!supported) {
-                    return this;
-                }
-                return this.fadeTo(0, duration, callback);
-            };
-            this.fadeWith = function (sound, duration) {
-                if (!supported) {
-                    return this;
-                }
-                this.fadeOut(duration, function () {
-                    this.stop();
-                });
-                sound.play().fadeIn(duration);
-                return this;
-            };
-            this.whenReady = function (func) {
-                if (!supported) {
-                    return null;
-                }
-                var self = this;
-                if (this.sound.readyState === 0) {
-                    this.bind("canplay.buzzwhenready", function () {
-                        func.call(self);
-                    });
-                } else {
-                    func.call(self);
-                }
-            };
-            this.addSource = function (src) {
-                var self = this,
-                    source = doc.createElement("source");
-                source.src = src;
-                if (buzz.types[getExt(src)]) {
-                    source.type = buzz.types[getExt(src)];
-                }
-                this.sound.appendChild(source);
-                source.addEventListener("error", function (e) {
-                    self.trigger("sourceerror", e);
-                });
-                return source;
-            };
-            function timerangeToArray(timeRange) {
-                var array = [],
-                    length = timeRange.length - 1;
-                for (var i = 0; i <= length; i++) {
-                    array.push({
-                        start: timeRange.start(i),
-                        end: timeRange.end(i)
-                    });
-                }
-                return array;
-            }
-            function getExt(filename) {
-                return filename.split(".").pop();
-            }
-            if (supported && src) {
-                for (var i in buzz.defaults) {
-                    if (buzz.defaults.hasOwnProperty(i)) {
-                        if (options[i] === undefined) {
-                            options[i] = buzz.defaults[i];
-                        }
-                    }
-                }
-                this.sound = doc.createElement("audio");
-                if (options.webAudioApi) {
-                    var audioCtx = buzz.getAudioContext();
-                    if (audioCtx) {
-                        this.source = audioCtx.createMediaElementSource(this.sound);
-                        this.source.connect(audioCtx.destination);
-                    }
-                }
-                if (src instanceof Array) {
-                    for (var j in src) {
-                        if (src.hasOwnProperty(j)) {
-                            this.addSource(src[j]);
-                        }
-                    }
-                } else if (options.formats.length) {
-                    for (var k in options.formats) {
-                        if (options.formats.hasOwnProperty(k)) {
-                            this.addSource(src + "." + options.formats[k]);
-                        }
-                    }
-                } else {
-                    this.addSource(src);
-                }
-                if (options.loop) {
-                    this.loop();
-                }
-                if (options.autoplay) {
-                    this.sound.autoplay = "autoplay";
-                }
-                if (options.preload === true) {
-                    this.sound.preload = "auto";
-                } else if (options.preload === false) {
-                    this.sound.preload = "none";
-                } else {
-                    this.sound.preload = options.preload;
-                }
-                this.setVolume(options.volume);
-                buzz.sounds.push(this);
-            }
-        },
-        group: function group(sounds) {
-            sounds = argsToArray(sounds, arguments);
-            this.getSounds = function () {
-                return sounds;
-            };
-            this.add = function (soundArray) {
-                soundArray = argsToArray(soundArray, arguments);
-                for (var a = 0; a < soundArray.length; a++) {
-                    sounds.push(soundArray[a]);
-                }
-            };
-            this.remove = function (soundArray) {
-                soundArray = argsToArray(soundArray, arguments);
-                for (var a = 0; a < soundArray.length; a++) {
-                    for (var i = 0; i < sounds.length; i++) {
-                        if (sounds[i] === soundArray[a]) {
-                            sounds.splice(i, 1);
-                            break;
-                        }
-                    }
-                }
-            };
-            this.load = function () {
-                fn("load");
-                return this;
-            };
-            this.play = function () {
-                fn("play");
-                return this;
-            };
-            this.togglePlay = function () {
-                fn("togglePlay");
-                return this;
-            };
-            this.pause = function (time) {
-                fn("pause", time);
-                return this;
-            };
-            this.stop = function () {
-                fn("stop");
-                return this;
-            };
-            this.mute = function () {
-                fn("mute");
-                return this;
-            };
-            this.unmute = function () {
-                fn("unmute");
-                return this;
-            };
-            this.toggleMute = function () {
-                fn("toggleMute");
-                return this;
-            };
-            this.setVolume = function (volume) {
-                fn("setVolume", volume);
-                return this;
-            };
-            this.increaseVolume = function (value) {
-                fn("increaseVolume", value);
-                return this;
-            };
-            this.decreaseVolume = function (value) {
-                fn("decreaseVolume", value);
-                return this;
-            };
-            this.loop = function () {
-                fn("loop");
-                return this;
-            };
-            this.unloop = function () {
-                fn("unloop");
-                return this;
-            };
-            this.setSpeed = function (speed) {
-                fn("setSpeed", speed);
-                return this;
-            };
-            this.setTime = function (time) {
-                fn("setTime", time);
-                return this;
-            };
-            this.set = function (key, value) {
-                fn("set", key, value);
-                return this;
-            };
-            this.bind = function (type, func) {
-                fn("bind", type, func);
-                return this;
-            };
-            this.unbind = function (type) {
-                fn("unbind", type);
-                return this;
-            };
-            this.bindOnce = function (type, func) {
-                fn("bindOnce", type, func);
-                return this;
-            };
-            this.trigger = function (type) {
-                fn("trigger", type);
-                return this;
-            };
-            this.fade = function (from, to, duration, callback) {
-                fn("fade", from, to, duration, callback);
-                return this;
-            };
-            this.fadeIn = function (duration, callback) {
-                fn("fadeIn", duration, callback);
-                return this;
-            };
-            this.fadeOut = function (duration, callback) {
-                fn("fadeOut", duration, callback);
-                return this;
-            };
-            function fn() {
-                var args = argsToArray(null, arguments),
-                    func = args.shift();
-                for (var i = 0; i < sounds.length; i++) {
-                    sounds[i][func].apply(sounds[i], args);
-                }
-            }
-            function argsToArray(array, args) {
-                return array instanceof Array ? array : Array.prototype.slice.call(args);
-            }
-        },
-        all: function all() {
-            return new buzz.group(buzz.sounds);
-        },
-        isSupported: function isSupported() {
-            return !!buzz.el.canPlayType;
-        },
-        isOGGSupported: function isOGGSupported() {
-            return !!buzz.el.canPlayType && buzz.el.canPlayType("audio/ogg; codecs=\"vorbis\"");
-        },
-        isWAVSupported: function isWAVSupported() {
-            return !!buzz.el.canPlayType && buzz.el.canPlayType("audio/wav; codecs=\"1\"");
-        },
-        isMP3Supported: function isMP3Supported() {
-            return !!buzz.el.canPlayType && buzz.el.canPlayType("audio/mpeg;");
-        },
-        isAACSupported: function isAACSupported() {
-            return !!buzz.el.canPlayType && (buzz.el.canPlayType("audio/x-m4a;") || buzz.el.canPlayType("audio/aac;"));
-        },
-        toTimer: function toTimer(time, withHours) {
-            var h, m, s;
-            h = Math.floor(time / 3600);
-            h = isNaN(h) ? "--" : h >= 10 ? h : "0" + h;
-            m = withHours ? Math.floor(time / 60 % 60) : Math.floor(time / 60);
-            m = isNaN(m) ? "--" : m >= 10 ? m : "0" + m;
-            s = Math.floor(time % 60);
-            s = isNaN(s) ? "--" : s >= 10 ? s : "0" + s;
-            return withHours ? h + ":" + m + ":" + s : m + ":" + s;
-        },
-        fromTimer: function fromTimer(time) {
-            var splits = time.toString().split(":");
-            if (splits && splits.length === 3) {
-                time = parseInt(splits[0], 10) * 3600 + parseInt(splits[1], 10) * 60 + parseInt(splits[2], 10);
-            }
-            if (splits && splits.length === 2) {
-                time = parseInt(splits[0], 10) * 60 + parseInt(splits[1], 10);
-            }
-            return time;
-        },
-        toPercent: function toPercent(value, total, decimal) {
-            var r = Math.pow(10, decimal || 0);
-            return Math.round(value * 100 / total * r) / r;
-        },
-        fromPercent: function fromPercent(percent, total, decimal) {
-            var r = Math.pow(10, decimal || 0);
-            return Math.round(total / 100 * percent * r) / r;
-        }
-    };
-    return buzz;
-});
-
-},{}],4:[function(require,module,exports){
 "use strict";
 
 var THREE = require("three");
@@ -2538,7 +1793,7 @@ module.exports = (function () {
 	return Physijs;
 })();
 
-},{"three":106}],5:[function(require,module,exports){
+},{"three":106}],4:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -2554,7 +1809,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 var THREE = require("three");
-var buzz = require("./lib/buzz");
+var buzz = require("buzz");
 var TWEEN = require("tween.js");
 var io = require("socket.io-client");
 var kt = require("kutility");
@@ -2648,6 +1903,9 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
         this.socket = io("185.21.216.190:6001");
         this.socket.on("fresh-tweet", this.handleNewTweet.bind(this));
+        if (this.sounds.background1loud.isPaused()) {
+          this.sounds.background1loud.loop().play();
+        }
       }
     },
     updateForUseMeshes: {
@@ -2868,6 +2126,13 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
 
         this.makeHoldNotes(10000);
         this.makeHoldNotes(20000);
+
+        setTimeout(function () {
+          console.log("Checking background sound...");
+          if (_this.sounds.background1loud.isPaused()) {
+            _this.sounds.background1loud.loop().play();
+          }
+        }, 5000);
       }
     },
     enter: {
@@ -2898,7 +2163,6 @@ var MainScene = exports.MainScene = (function (_SheenScene) {
     update: {
       value: function update(dt) {
         _get(Object.getPrototypeOf(MainScene.prototype), "update", this).call(this, dt);
-
         if (this.rotateCamera) {
           this.cameraRotationAngle += this.cameraRotationIncrement; //0.002;
         }
@@ -3573,7 +2837,7 @@ function removeClass(selector, name) {
   }
 }
 
-},{"./lib/buzz":3,"./sheen-scene.es6":7,"./word-tracker.es6":11,"kutility":41,"nlp_compromise":43,"socket.io-client":94,"three":106,"tone":108,"tween.js":109}],6:[function(require,module,exports){
+},{"./sheen-scene.es6":6,"./word-tracker.es6":10,"buzz":16,"kutility":41,"nlp_compromise":43,"socket.io-client":94,"three":106,"tone":108,"tween.js":109}],5:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -3814,7 +3078,7 @@ $(function () {
   sheen.activate();
 });
 
-},{"./controls/fly-controls":1,"./lib/physi.js":4,"./main-scene.es6":5,"./social-evader":8,"./three-boiler.es6":9,"jquery":39,"three":106,"tween.js":109}],7:[function(require,module,exports){
+},{"./controls/fly-controls":1,"./lib/physi.js":3,"./main-scene.es6":4,"./social-evader":7,"./three-boiler.es6":8,"jquery":39,"three":106,"tween.js":109}],6:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -4010,7 +3274,7 @@ var SheenScene = exports.SheenScene = (function () {
   return SheenScene;
 })();
 
-},{"jquery":39,"three":106}],8:[function(require,module,exports){
+},{"jquery":39,"three":106}],7:[function(require,module,exports){
 "use strict";
 
 var $ = require("jquery");
@@ -4069,7 +3333,7 @@ module.exports = function () {
   });
 };
 
-},{"./vector":10,"jquery":39}],9:[function(require,module,exports){
+},{"./vector":9,"jquery":39}],8:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -4257,7 +3521,7 @@ THREE.typeface_js = window._typeface_js;
 
 // lol
 
-},{"jquery":39,"three":106}],10:[function(require,module,exports){
+},{"jquery":39,"three":106}],9:[function(require,module,exports){
 "use strict";
 
 module.exports = Vector;
@@ -4321,7 +3585,7 @@ Vector.prototype = {
     }
 };
 
-},{}],11:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 
 var _createClass = (function () { function defineProperties(target, props) { for (var key in props) { var prop = props[key]; prop.configurable = true; if (prop.value) prop.writable = true; } Object.defineProperties(target, props); } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -4391,7 +3655,7 @@ var WordTracker = exports.WordTracker = (function () {
   return WordTracker;
 })();
 
-},{}],12:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -4421,7 +3685,7 @@ function after(count, callback, err_cb) {
 
 function noop() {}
 
-},{}],13:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /**
  * An abstraction for slicing an arraybuffer even when
  * ArrayBuffer.prototype.slice is not supported
@@ -4452,7 +3716,7 @@ module.exports = function(arraybuffer, start, end) {
   return result.buffer;
 };
 
-},{}],14:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 
 /**
  * Expose `Backoff`.
@@ -4539,7 +3803,7 @@ Backoff.prototype.setJitter = function(jitter){
 };
 
 
-},{}],15:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 /*
  * base64-arraybuffer
  * https://github.com/niklasvh/base64-arraybuffer
@@ -4608,7 +3872,7 @@ Backoff.prototype.setJitter = function(jitter){
   };
 })();
 
-},{}],16:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 (function (global){
 /**
  * Create a blob builder even when vendor prefixes exist
@@ -4708,6 +3972,742 @@ module.exports = (function() {
 })();
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],16:[function(require,module,exports){
+ // ----------------------------------------------------------------------------
+ // Buzz, a Javascript HTML5 Audio library
+ // v1.2.1 - Built 2018-05-10 10:14
+ // Licensed under the MIT license.
+ // http://buzz.jaysalvat.com/
+ // ----------------------------------------------------------------------------
+ // Copyright (C) 2010-2018 Jay Salvat
+ // http://jaysalvat.com/
+ // ----------------------------------------------------------------------------
+
+(function(context, factory) {
+    "use strict";
+    if (typeof module !== "undefined" && module.exports) {
+        module.exports = factory();
+    } else if (typeof define === "function" && define.amd) {
+        define([], factory);
+    } else {
+        context.buzz = factory();
+    }
+})(this, function() {
+    "use strict";
+    var AudioContext = window.AudioContext || window.webkitAudioContext;
+    var buzz = {
+        defaults: {
+            autoplay: false,
+            crossOrigin: null,
+            duration: 5e3,
+            formats: [],
+            loop: false,
+            placeholder: "--",
+            preload: "metadata",
+            volume: 80,
+            webAudioApi: false,
+            document: window.document
+        },
+        types: {
+            mp3: "audio/mpeg",
+            ogg: "audio/ogg",
+            wav: "audio/wav",
+            aac: "audio/aac",
+            m4a: "audio/x-m4a"
+        },
+        sounds: [],
+        el: document.createElement("audio"),
+        getAudioContext: function() {
+            if (this.audioCtx === undefined) {
+                try {
+                    this.audioCtx = AudioContext ? new AudioContext() : null;
+                } catch (e) {
+                    this.audioCtx = null;
+                }
+            }
+            return this.audioCtx;
+        },
+        sound: function(src, options) {
+            options = options || {};
+            var doc = options.document || buzz.defaults.document;
+            var pid = 0, events = [], eventsOnce = {}, supported = buzz.isSupported();
+            this.load = function() {
+                if (!supported) {
+                    return this;
+                }
+                this.sound.load();
+                return this;
+            };
+            this.play = function() {
+                if (!supported) {
+                    return this;
+                }
+                this.sound.play().catch(function() {});
+                return this;
+            };
+            this.togglePlay = function() {
+                if (!supported) {
+                    return this;
+                }
+                if (this.sound.paused) {
+                    this.sound.play().catch(function() {});
+                } else {
+                    this.sound.pause();
+                }
+                return this;
+            };
+            this.pause = function() {
+                if (!supported) {
+                    return this;
+                }
+                this.sound.pause();
+                return this;
+            };
+            this.isPaused = function() {
+                if (!supported) {
+                    return null;
+                }
+                return this.sound.paused;
+            };
+            this.stop = function() {
+                if (!supported) {
+                    return this;
+                }
+                this.sound.pause();
+                this.setTime(0);
+                return this;
+            };
+            this.isEnded = function() {
+                if (!supported) {
+                    return null;
+                }
+                return this.sound.ended;
+            };
+            this.loop = function() {
+                if (!supported) {
+                    return this;
+                }
+                this.sound.loop = "loop";
+                this.bind("ended.buzzloop", function() {
+                    this.currentTime = 0;
+                    this.play();
+                });
+                return this;
+            };
+            this.unloop = function() {
+                if (!supported) {
+                    return this;
+                }
+                this.sound.removeAttribute("loop");
+                this.unbind("ended.buzzloop");
+                return this;
+            };
+            this.mute = function() {
+                if (!supported) {
+                    return this;
+                }
+                this.sound.muted = true;
+                return this;
+            };
+            this.unmute = function() {
+                if (!supported) {
+                    return this;
+                }
+                this.sound.muted = false;
+                return this;
+            };
+            this.toggleMute = function() {
+                if (!supported) {
+                    return this;
+                }
+                this.sound.muted = !this.sound.muted;
+                return this;
+            };
+            this.isMuted = function() {
+                if (!supported) {
+                    return null;
+                }
+                return this.sound.muted;
+            };
+            this.setVolume = function(volume) {
+                if (!supported) {
+                    return this;
+                }
+                if (volume < 0) {
+                    volume = 0;
+                }
+                if (volume > 100) {
+                    volume = 100;
+                }
+                this.volume = volume;
+                this.sound.volume = volume / 100;
+                return this;
+            };
+            this.getVolume = function() {
+                if (!supported) {
+                    return this;
+                }
+                return this.volume;
+            };
+            this.increaseVolume = function(value) {
+                return this.setVolume(this.volume + (value || 1));
+            };
+            this.decreaseVolume = function(value) {
+                return this.setVolume(this.volume - (value || 1));
+            };
+            this.setTime = function(time) {
+                if (!supported) {
+                    return this;
+                }
+                var set = true;
+                this.whenReady(function() {
+                    if (set === true) {
+                        set = false;
+                        this.sound.currentTime = time;
+                    }
+                });
+                return this;
+            };
+            this.getTime = function() {
+                if (!supported) {
+                    return null;
+                }
+                var time = Math.round(this.sound.currentTime * 100) / 100;
+                return isNaN(time) ? buzz.defaults.placeholder : time;
+            };
+            this.setPercent = function(percent) {
+                if (!supported) {
+                    return this;
+                }
+                return this.setTime(buzz.fromPercent(percent, this.sound.duration));
+            };
+            this.getPercent = function() {
+                if (!supported) {
+                    return null;
+                }
+                var percent = Math.round(buzz.toPercent(this.sound.currentTime, this.sound.duration));
+                return isNaN(percent) ? buzz.defaults.placeholder : percent;
+            };
+            this.setSpeed = function(duration) {
+                if (!supported) {
+                    return this;
+                }
+                this.sound.playbackRate = duration;
+                return this;
+            };
+            this.getSpeed = function() {
+                if (!supported) {
+                    return null;
+                }
+                return this.sound.playbackRate;
+            };
+            this.getDuration = function() {
+                if (!supported) {
+                    return null;
+                }
+                var duration = Math.round(this.sound.duration * 100) / 100;
+                return isNaN(duration) ? buzz.defaults.placeholder : duration;
+            };
+            this.getPlayed = function() {
+                if (!supported) {
+                    return null;
+                }
+                return timerangeToArray(this.sound.played);
+            };
+            this.getBuffered = function() {
+                if (!supported) {
+                    return null;
+                }
+                return timerangeToArray(this.sound.buffered);
+            };
+            this.getSeekable = function() {
+                if (!supported) {
+                    return null;
+                }
+                return timerangeToArray(this.sound.seekable);
+            };
+            this.getErrorCode = function() {
+                if (supported && this.sound.error) {
+                    return this.sound.error.code;
+                }
+                return 0;
+            };
+            this.getErrorMessage = function() {
+                if (!supported) {
+                    return null;
+                }
+                switch (this.getErrorCode()) {
+                  case 1:
+                    return "MEDIA_ERR_ABORTED";
+
+                  case 2:
+                    return "MEDIA_ERR_NETWORK";
+
+                  case 3:
+                    return "MEDIA_ERR_DECODE";
+
+                  case 4:
+                    return "MEDIA_ERR_SRC_NOT_SUPPORTED";
+
+                  default:
+                    return null;
+                }
+            };
+            this.getStateCode = function() {
+                if (!supported) {
+                    return null;
+                }
+                return this.sound.readyState;
+            };
+            this.getStateMessage = function() {
+                if (!supported) {
+                    return null;
+                }
+                switch (this.getStateCode()) {
+                  case 0:
+                    return "HAVE_NOTHING";
+
+                  case 1:
+                    return "HAVE_METADATA";
+
+                  case 2:
+                    return "HAVE_CURRENT_DATA";
+
+                  case 3:
+                    return "HAVE_FUTURE_DATA";
+
+                  case 4:
+                    return "HAVE_ENOUGH_DATA";
+
+                  default:
+                    return null;
+                }
+            };
+            this.getNetworkStateCode = function() {
+                if (!supported) {
+                    return null;
+                }
+                return this.sound.networkState;
+            };
+            this.getNetworkStateMessage = function() {
+                if (!supported) {
+                    return null;
+                }
+                switch (this.getNetworkStateCode()) {
+                  case 0:
+                    return "NETWORK_EMPTY";
+
+                  case 1:
+                    return "NETWORK_IDLE";
+
+                  case 2:
+                    return "NETWORK_LOADING";
+
+                  case 3:
+                    return "NETWORK_NO_SOURCE";
+
+                  default:
+                    return null;
+                }
+            };
+            this.set = function(key, value) {
+                if (!supported) {
+                    return this;
+                }
+                this.sound[key] = value;
+                return this;
+            };
+            this.get = function(key) {
+                if (!supported) {
+                    return null;
+                }
+                return key ? this.sound[key] : this.sound;
+            };
+            this.bind = function(types, func) {
+                if (!supported) {
+                    return this;
+                }
+                types = types.split(" ");
+                var self = this, efunc = function(e) {
+                    func.call(self, e);
+                };
+                for (var t = 0; t < types.length; t++) {
+                    var type = types[t], idx = type;
+                    type = idx.split(".")[0];
+                    events.push({
+                        idx: idx,
+                        func: efunc
+                    });
+                    this.sound.addEventListener(type, efunc, true);
+                }
+                return this;
+            };
+            this.unbind = function(types) {
+                if (!supported) {
+                    return this;
+                }
+                types = types.split(" ");
+                for (var t = 0; t < types.length; t++) {
+                    var idx = types[t], type = idx.split(".")[0];
+                    for (var i = 0; i < events.length; i++) {
+                        var namespace = events[i].idx.split(".");
+                        if (events[i].idx === idx || namespace[1] && namespace[1] === idx.replace(".", "")) {
+                            this.sound.removeEventListener(type, events[i].func, true);
+                            events.splice(i, 1);
+                        }
+                    }
+                }
+                return this;
+            };
+            this.bindOnce = function(type, func) {
+                if (!supported) {
+                    return this;
+                }
+                var self = this;
+                eventsOnce[pid++] = false;
+                this.bind(type + "." + pid, function() {
+                    if (!eventsOnce[pid]) {
+                        eventsOnce[pid] = true;
+                        func.call(self);
+                    }
+                    self.unbind(type + "." + pid);
+                });
+                return this;
+            };
+            this.trigger = function(types, detail) {
+                if (!supported) {
+                    return this;
+                }
+                types = types.split(" ");
+                for (var t = 0; t < types.length; t++) {
+                    var idx = types[t];
+                    for (var i = 0; i < events.length; i++) {
+                        var eventType = events[i].idx.split(".");
+                        if (events[i].idx === idx || eventType[0] && eventType[0] === idx.replace(".", "")) {
+                            var evt = doc.createEvent("HTMLEvents");
+                            evt.initEvent(eventType[0], false, true);
+                            evt.originalEvent = detail;
+                            this.sound.dispatchEvent(evt);
+                        }
+                    }
+                }
+                return this;
+            };
+            this.fadeTo = function(to, duration, callback) {
+                if (!supported) {
+                    return this;
+                }
+                if (duration instanceof Function) {
+                    callback = duration;
+                    duration = buzz.defaults.duration;
+                } else {
+                    duration = duration || buzz.defaults.duration;
+                }
+                var from = this.volume, delay = duration / Math.abs(from - to), self = this, fadeToTimeout;
+                this.play();
+                function doFade() {
+                    clearTimeout(fadeToTimeout);
+                    fadeToTimeout = setTimeout(function() {
+                        if (from < to && self.volume < to) {
+                            self.setVolume(self.volume += 1);
+                            doFade();
+                        } else if (from > to && self.volume > to) {
+                            self.setVolume(self.volume -= 1);
+                            doFade();
+                        } else if (callback instanceof Function) {
+                            callback.apply(self);
+                        }
+                    }, delay);
+                }
+                this.whenReady(function() {
+                    doFade();
+                });
+                return this;
+            };
+            this.fadeIn = function(duration, callback) {
+                if (!supported) {
+                    return this;
+                }
+                return this.setVolume(0).fadeTo(100, duration, callback);
+            };
+            this.fadeOut = function(duration, callback) {
+                if (!supported) {
+                    return this;
+                }
+                return this.fadeTo(0, duration, callback);
+            };
+            this.fadeWith = function(sound, duration) {
+                if (!supported) {
+                    return this;
+                }
+                this.fadeOut(duration, function() {
+                    this.stop();
+                });
+                sound.play().fadeIn(duration);
+                return this;
+            };
+            this.whenReady = function(func) {
+                if (!supported) {
+                    return null;
+                }
+                var self = this;
+                if (this.sound.readyState === 0) {
+                    this.bind("canplay.buzzwhenready", function() {
+                        func.call(self);
+                    });
+                } else {
+                    func.call(self);
+                }
+            };
+            this.addSource = function(src) {
+                var self = this, source = doc.createElement("source");
+                source.src = src;
+                if (buzz.types[getExt(src)]) {
+                    source.type = buzz.types[getExt(src)];
+                }
+                this.sound.appendChild(source);
+                source.addEventListener("error", function(e) {
+                    self.trigger("sourceerror", e);
+                });
+                return source;
+            };
+            function timerangeToArray(timeRange) {
+                var array = [], length = timeRange.length - 1;
+                for (var i = 0; i <= length; i++) {
+                    array.push({
+                        start: timeRange.start(i),
+                        end: timeRange.end(i)
+                    });
+                }
+                return array;
+            }
+            function getExt(filename) {
+                return filename.split(".").pop();
+            }
+            if (supported && src) {
+                for (var i in buzz.defaults) {
+                    if (buzz.defaults.hasOwnProperty(i)) {
+                        if (options[i] === undefined) {
+                            options[i] = buzz.defaults[i];
+                        }
+                    }
+                }
+                this.sound = doc.createElement("audio");
+                if (options.crossOrigin !== null) {
+                    this.sound.crossOrigin = options.crossOrigin;
+                }
+                if (options.webAudioApi) {
+                    var audioCtx = buzz.getAudioContext();
+                    if (audioCtx) {
+                        this.source = audioCtx.createMediaElementSource(this.sound);
+                        this.source.connect(audioCtx.destination);
+                    }
+                }
+                if (src instanceof Array) {
+                    for (var j in src) {
+                        if (src.hasOwnProperty(j)) {
+                            this.addSource(src[j]);
+                        }
+                    }
+                } else if (options.formats.length) {
+                    for (var k in options.formats) {
+                        if (options.formats.hasOwnProperty(k)) {
+                            this.addSource(src + "." + options.formats[k]);
+                        }
+                    }
+                } else {
+                    this.addSource(src);
+                }
+                if (options.loop) {
+                    this.loop();
+                }
+                if (options.autoplay) {
+                    this.sound.autoplay = "autoplay";
+                }
+                if (options.preload === true) {
+                    this.sound.preload = "auto";
+                } else if (options.preload === false) {
+                    this.sound.preload = "none";
+                } else {
+                    this.sound.preload = options.preload;
+                }
+                this.setVolume(options.volume);
+                buzz.sounds.push(this);
+            }
+        },
+        group: function(sounds) {
+            sounds = argsToArray(sounds, arguments);
+            this.getSounds = function() {
+                return sounds;
+            };
+            this.add = function(soundArray) {
+                soundArray = argsToArray(soundArray, arguments);
+                for (var a = 0; a < soundArray.length; a++) {
+                    sounds.push(soundArray[a]);
+                }
+            };
+            this.remove = function(soundArray) {
+                soundArray = argsToArray(soundArray, arguments);
+                for (var a = 0; a < soundArray.length; a++) {
+                    for (var i = 0; i < sounds.length; i++) {
+                        if (sounds[i] === soundArray[a]) {
+                            sounds.splice(i, 1);
+                            break;
+                        }
+                    }
+                }
+            };
+            this.load = function() {
+                fn("load");
+                return this;
+            };
+            this.play = function() {
+                fn("play");
+                return this;
+            };
+            this.togglePlay = function() {
+                fn("togglePlay");
+                return this;
+            };
+            this.pause = function(time) {
+                fn("pause", time);
+                return this;
+            };
+            this.stop = function() {
+                fn("stop");
+                return this;
+            };
+            this.mute = function() {
+                fn("mute");
+                return this;
+            };
+            this.unmute = function() {
+                fn("unmute");
+                return this;
+            };
+            this.toggleMute = function() {
+                fn("toggleMute");
+                return this;
+            };
+            this.setVolume = function(volume) {
+                fn("setVolume", volume);
+                return this;
+            };
+            this.increaseVolume = function(value) {
+                fn("increaseVolume", value);
+                return this;
+            };
+            this.decreaseVolume = function(value) {
+                fn("decreaseVolume", value);
+                return this;
+            };
+            this.loop = function() {
+                fn("loop");
+                return this;
+            };
+            this.unloop = function() {
+                fn("unloop");
+                return this;
+            };
+            this.setSpeed = function(speed) {
+                fn("setSpeed", speed);
+                return this;
+            };
+            this.setTime = function(time) {
+                fn("setTime", time);
+                return this;
+            };
+            this.set = function(key, value) {
+                fn("set", key, value);
+                return this;
+            };
+            this.bind = function(type, func) {
+                fn("bind", type, func);
+                return this;
+            };
+            this.unbind = function(type) {
+                fn("unbind", type);
+                return this;
+            };
+            this.bindOnce = function(type, func) {
+                fn("bindOnce", type, func);
+                return this;
+            };
+            this.trigger = function(type) {
+                fn("trigger", type);
+                return this;
+            };
+            this.fade = function(from, to, duration, callback) {
+                fn("fade", from, to, duration, callback);
+                return this;
+            };
+            this.fadeIn = function(duration, callback) {
+                fn("fadeIn", duration, callback);
+                return this;
+            };
+            this.fadeOut = function(duration, callback) {
+                fn("fadeOut", duration, callback);
+                return this;
+            };
+            function fn() {
+                var args = argsToArray(null, arguments), func = args.shift();
+                for (var i = 0; i < sounds.length; i++) {
+                    sounds[i][func].apply(sounds[i], args);
+                }
+            }
+            function argsToArray(array, args) {
+                return array instanceof Array ? array : Array.prototype.slice.call(args);
+            }
+        },
+        all: function() {
+            return new buzz.group(buzz.sounds);
+        },
+        isSupported: function() {
+            return !!buzz.el.canPlayType;
+        },
+        isOGGSupported: function() {
+            return !!buzz.el.canPlayType && buzz.el.canPlayType('audio/ogg; codecs="vorbis"');
+        },
+        isWAVSupported: function() {
+            return !!buzz.el.canPlayType && buzz.el.canPlayType('audio/wav; codecs="1"');
+        },
+        isMP3Supported: function() {
+            return !!buzz.el.canPlayType && buzz.el.canPlayType("audio/mpeg;");
+        },
+        isAACSupported: function() {
+            return !!buzz.el.canPlayType && (buzz.el.canPlayType("audio/x-m4a;") || buzz.el.canPlayType("audio/aac;"));
+        },
+        toTimer: function(time, withHours) {
+            var h, m, s;
+            h = Math.floor(time / 3600);
+            h = isNaN(h) ? "--" : h >= 10 ? h : "0" + h;
+            m = withHours ? Math.floor(time / 60 % 60) : Math.floor(time / 60);
+            m = isNaN(m) ? "--" : m >= 10 ? m : "0" + m;
+            s = Math.floor(time % 60);
+            s = isNaN(s) ? "--" : s >= 10 ? s : "0" + s;
+            return withHours ? h + ":" + m + ":" + s : m + ":" + s;
+        },
+        fromTimer: function(time) {
+            var splits = time.toString().split(":");
+            if (splits && splits.length === 3) {
+                time = parseInt(splits[0], 10) * 3600 + parseInt(splits[1], 10) * 60 + parseInt(splits[2], 10);
+            }
+            if (splits && splits.length === 2) {
+                time = parseInt(splits[0], 10) * 60 + parseInt(splits[1], 10);
+            }
+            return time;
+        },
+        toPercent: function(value, total, decimal) {
+            var r = Math.pow(10, decimal || 0);
+            return Math.round(value * 100 / total * r) / r;
+        },
+        fromPercent: function(percent, total, decimal) {
+            var r = Math.pow(10, decimal || 0);
+            return Math.round(total / 100 * percent * r) / r;
+        }
+    };
+    return buzz;
+});
 },{}],17:[function(require,module,exports){
 /**
  * Slice reference.
@@ -8282,7 +8282,7 @@ exports.decodePayloadAsBinary = function (data, binaryType, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./keys":34,"after":12,"arraybuffer.slice":13,"base64-arraybuffer":15,"blob":16,"has-binary":35,"wtf-8":110}],34:[function(require,module,exports){
+},{"./keys":34,"after":11,"arraybuffer.slice":12,"base64-arraybuffer":14,"blob":15,"has-binary":35,"wtf-8":110}],34:[function(require,module,exports){
 
 /**
  * Gets the keys for an object.
@@ -29396,7 +29396,7 @@ Manager.prototype.onreconnect = function () {
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":96,"./socket":97,"backo2":14,"component-bind":17,"component-emitter":99,"debug":20,"engine.io-client":22,"indexof":37,"socket.io-parser":101}],96:[function(require,module,exports){
+},{"./on":96,"./socket":97,"backo2":13,"component-bind":17,"component-emitter":99,"debug":20,"engine.io-client":22,"indexof":37,"socket.io-parser":101}],96:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -82890,6 +82890,9 @@ var currentQueue;
 var queueIndex = -1;
 
 function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
     draining = false;
     if (currentQueue.length) {
         queue = currentQueue.concat(queue);
@@ -82973,4 +82976,4 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}]},{},[6]);
+},{}]},{},[5]);
