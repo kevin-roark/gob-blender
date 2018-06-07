@@ -6,8 +6,10 @@
   "author": "kevin roark",
   "private": true,
   "dependencies": {
+    "buzz": "^1.2.1",
     "jquery": "2.1.3",
     "kutility": "0.5.0",
+<<<<<<< HEAD
     "minify": "^3.0.4",
     "nlp_compromise": "^1.1.5",
     "sentiment": "^1.0.2",
@@ -20,6 +22,18 @@
     "twit": "^2.1.1",
     "uglify-js": "^3.3.14",
     "xml2js": "^0.4.15"
+=======
+    "nlp_compromise": "^1.1.5",
+    "sentiment": "^1.0.6",
+    "socket.io": "^1.7.4",
+    "socket.io-client": "^1.7.4",
+    "superagent": "^1.8.5",
+    "three": "0.72.0",
+    "tone": "^0.5.1",
+    "tween.js": "^16.6.0",
+    "twit": "^2.2.10",
+    "xml2js": "^0.4.19"
+>>>>>>> master
   },
   "devDependencies": {
     "babelify": "^5.0.4"

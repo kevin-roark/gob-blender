@@ -1,6 +1,6 @@
 
 var THREE = require('three');
-var buzz = require('./lib/buzz');
+var buzz = require('buzz');
 var TWEEN = require('tween.js');
 var io = require('socket.io-client');
 var kt = require('kutility');
@@ -87,6 +87,9 @@ export class MainScene extends SheenScene {
 
     this.socket = io('185.21.216.190:6001');
     this.socket.on('fresh-tweet', this.handleNewTweet.bind(this));
+    if (this.sounds.background1loud.isPaused()){
+      this.sounds.background1loud.loop().play()
+    }
   }
 
   updateForUseMeshes() {
@@ -313,6 +316,14 @@ export class MainScene extends SheenScene {
 
     this.makeHoldNotes(10000);
     this.makeHoldNotes(20000);
+
+    setTimeout(() => {
+      console.log("Checking background sound...")
+      if (this.sounds.background1loud.isPaused()){
+        this.sounds.background1loud.loop().play()
+      }
+    }, 5000)
+
   }
 
   /// Overrides
@@ -340,7 +351,6 @@ export class MainScene extends SheenScene {
 
   update(dt) {
     super.update(dt);
-
     if (this.rotateCamera) {
       this.cameraRotationAngle += this.cameraRotationIncrement; //0.002;
     }
